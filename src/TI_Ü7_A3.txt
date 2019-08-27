@@ -1,0 +1,20 @@
+Aufgabe 3)
+
+x2 = fac(x):
+    M1: x5 := x +0
+    M2: x2 := 0
+    M3: x1 := 1;
+    M4: IF x5 = 1 THEN GO TO M17
+    M5: x3 := x1 +0
+    M6: IF x3 := 0 THEN GO TO M14
+    M7: x4 := x5 +0
+    M8: IF x4 = 0 THEN GO TO M12
+    M9: x2 := x2 +1
+    M10: x4 := x4 -1
+    M11: GO TO M8
+    M12: x3 := x3 -1
+    M13: GO TO M6
+    M14: x5 := x5 -1
+    M15: x1 := x2 +0
+    M16: GO TO M4
+    M17: STOP
