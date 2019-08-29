@@ -49,34 +49,39 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
       catalogue = addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],minMapq = minMapq,bowtieOptions)
     }
   }
+
   print("assembly")
+
   #-------------------------------- assembly --------------------------------------------------------
   RRSDS = "~/RealReadSimDS"
+  print(length(seqNames))
   for(i in 1:length(seqNames)){
+
     print("readiying the data")
+
     #--------------------------- readiyng the data -----------------------------------------------------
-    timetime = Sys.time()
     data = readRDS(paste(RRSDS,"/",seqNames[i],"/",seqNames[i],".Rds",sep =""))
-    print(Sys.time() - timetime)
-    data = data.frame(pos = start(data),width = width(data),DNAString = names(data))      # unbedingt umgehen (superlangsam) !!
-    print(Sys.time() - timetime)
-    data = randomReads(data,catalogue$totalLength[i],coverage = coverage[covAt],repeatable,seed,redraw)
-    seqData = readDNAStringSet(paste(RRSDS,"/",seqNames[i],"/",catalogue$fastaName[i]))
+    data = data.table(pos = start(data),width = width(data),DNAString = names(data))
+    data = randomReads(data,catalogue$totalLength[i],coverage = coverage[covAt],meanWidht = mean(data$width),repeatable,seed,redraw)
+    seqData = readDNAStringSet(as.character(catalogue$fastaName[i]))
+
+    print(length(seqData))
     print("get and save contigs")
+
     #-------------------------- get and save the contigs -----------------------------------------------
-    for(j in 1:length(sequenceData$seqs)){
-      partialData = subset(data, DNAString == unique(data$DNAString)[j])
-      name = toString(unique(partialData$DNAString))
-      partialSeqData = subset(sequenceData,substr(DNAString,1,nchar(name)) == toString(name))
+    partialSeqData = seqData[substr(names(seqData),1,nchar(seqNames[i])) == seqNames[i]]
 
-      if(length(partialData$pos) > 0){
-        cov[[i]] = getCoverage(partialData$pos,partialData$width,partialSeqData$lengths[1])
-        contigs = evalCoverage(partialData$pos, partialData$width, partialSeqData$lengths[1],partialSeqData$seqs[1])
-        temptemp = meanCovToRange(contigs,cov[[i]])
-        temp[[length(temp) +1]] = IRanges(start = contigs,end = contigs,names = unique(data$DNAString)[j])
-        temp[[length(temp)]]@metadata = temptemp[[l]]
-      }
+    print(1)
 
+    if(length(data$pos) > 0){
+
+      print(length(partialSeqData))
+
+      cov[[i]] = RealReadSim::getCoverage(data$pos,data$width,partialSeqData@ranges@width[1])
+      contigs = RealReadSim::evalCoverage(data$pos, data$width, partialSeqData@ranges@width[1],toString(partialSeqData[[1]]))
+      temptemp = RealReadSim::meanCovToRange(contigs,cov[[i]])
+      temp[[length(temp) +1]] = IRanges(start = contigs,end = contigs,names = seqNames[i])
+      temp[[length(temp)]]@metadata = temptemp
     }
 
     if(covAt < length(coverage)){
@@ -84,10 +89,12 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     }
     print(Sys.time() -starttime)
   }
+
   print("co-assembly")
+
   #----------------------------------- co-assembly ----------------------------------------------------
 
-  res = coAssembleRRSDS(temp)
+  #res = coAssembleRRSDS(temp)
 
   if(humanReadable){
     makeHumanReadable(cov,res)

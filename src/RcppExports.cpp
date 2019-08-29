@@ -33,28 +33,28 @@ BEGIN_RCPP
 END_RCPP
 }
 // meanCovToRange
-list< vector<int> > meanCovToRange(vector<int> ranges, vector<int> coverage);
+std::list< std::vector<int> > meanCovToRange(std::vector<int> ranges, std::vector<int> coverage);
 RcppExport SEXP _RealReadSim_meanCovToRange(SEXP rangesSEXP, SEXP coverageSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< vector<int> >::type ranges(rangesSEXP);
-    Rcpp::traits::input_parameter< vector<int> >::type coverage(coverageSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type ranges(rangesSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type coverage(coverageSEXP);
     rcpp_result_gen = Rcpp::wrap(meanCovToRange(ranges, coverage));
     return rcpp_result_gen;
 END_RCPP
 }
 // sequenceToFastaReads
-bool sequenceToFastaReads(vector<int>& starts, string& sequence, int meanWidth, string& newFasta, string& nameTag);
+bool sequenceToFastaReads(std::vector<int>& starts, std::string& sequence, int meanWidth, std::string& newFasta, std::string& nameTag);
 RcppExport SEXP _RealReadSim_sequenceToFastaReads(SEXP startsSEXP, SEXP sequenceSEXP, SEXP meanWidthSEXP, SEXP newFastaSEXP, SEXP nameTagSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< vector<int>& >::type starts(startsSEXP);
-    Rcpp::traits::input_parameter< string& >::type sequence(sequenceSEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type starts(startsSEXP);
+    Rcpp::traits::input_parameter< std::string& >::type sequence(sequenceSEXP);
     Rcpp::traits::input_parameter< int >::type meanWidth(meanWidthSEXP);
-    Rcpp::traits::input_parameter< string& >::type newFasta(newFastaSEXP);
-    Rcpp::traits::input_parameter< string& >::type nameTag(nameTagSEXP);
+    Rcpp::traits::input_parameter< std::string& >::type newFasta(newFastaSEXP);
+    Rcpp::traits::input_parameter< std::string& >::type nameTag(nameTagSEXP);
     rcpp_result_gen = Rcpp::wrap(sequenceToFastaReads(starts, sequence, meanWidth, newFasta, nameTag));
     return rcpp_result_gen;
 END_RCPP

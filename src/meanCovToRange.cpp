@@ -4,12 +4,12 @@
 #include <iterator>
 #include <list>
 
-using namespace std;
+
 //[[Rcpp::export]]
 
-list< vector<int> > meanCovToRange(vector<int> ranges,vector<int> coverage){
-    list< vector<int> > res;
-    vector<int> temp;
+std::list< std::vector<int> > meanCovToRange(std::vector<int> ranges,std::vector<int> coverage){
+    std::list< std::vector<int> > res;
+    std::vector<int> temp;
     int n = 0;
 
     for(int i = 0;i < (int) ranges.size();i += 2){

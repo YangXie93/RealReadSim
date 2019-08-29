@@ -4,7 +4,7 @@ randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw
   print(seqLength)
   print(meanWidht)
   numberOfReads = as.integer((sum(seqLength) *coverage)/meanWidht)
-
+  print(numberOfReads)
   if(repeatable){
     set.seed(seed)
   }
