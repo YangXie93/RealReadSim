@@ -19,7 +19,7 @@ randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw
       answer = "z"
     }
     if(answer == "y" || answer == "yes" || redraw){
-      help = data.frame()
+      help = data.table()
       while(numberOfReads > length(data$pos)){
         help = rbind(help,data)
         numberOfReads = numberOfReads - length(data$pos)

@@ -19,8 +19,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // evalCoverage
-std::vector<int> evalCoverage(std::vector<int>& pos, std::vector<int>& width, int length, std::string seq);
-RcppExport SEXP _RealReadSim_evalCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP, SEXP seqSEXP) {
+std::vector<int> evalCoverage(std::vector<int>& pos, std::vector<int>& width, int length, std::string seq, int minContigLength);
+RcppExport SEXP _RealReadSim_evalCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP, SEXP seqSEXP, SEXP minContigLengthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -28,7 +28,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<int>& >::type width(widthSEXP);
     Rcpp::traits::input_parameter< int >::type length(lengthSEXP);
     Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
-    rcpp_result_gen = Rcpp::wrap(evalCoverage(pos, width, length, seq));
+    Rcpp::traits::input_parameter< int >::type minContigLength(minContigLengthSEXP);
+    rcpp_result_gen = Rcpp::wrap(evalCoverage(pos, width, length, seq, minContigLength));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -62,7 +63,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_RealReadSim_getCoverage", (DL_FUNC) &_RealReadSim_getCoverage, 3},
-    {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 4},
+    {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 5},
     {"_RealReadSim_meanCovToRange", (DL_FUNC) &_RealReadSim_meanCovToRange, 2},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
     {NULL, NULL, 0}

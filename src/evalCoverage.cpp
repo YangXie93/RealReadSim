@@ -6,7 +6,7 @@ using namespace Rcpp;
 //[[Rcpp::plugins(cpp11)]]
 //[[Rcpp::export]]
 
-std::vector<int> evalCoverage(std::vector<int>& pos,std::vector<int>& width,int length,std::string seq){
+std::vector<int> evalCoverage(std::vector<int>& pos,std::vector<int>& width,int length,std::string seq,int minContigLength){
   int meanWidth = 0;
   for(int i = 0;i < (int) width.size();i++){
     meanWidth += width[i];
@@ -18,6 +18,6 @@ std::vector<int> evalCoverage(std::vector<int>& pos,std::vector<int>& width,int 
 
   std::vector<bool> which;
   rep.evalOverlap(which);
-  std::vector<int> res = rep.assembleTestContigs();
-  return res;              //aufruf der auswertungs Funktion
+  std::vector<int> res = rep.assembleTestContigs(minContigLength);
+  return res;
 }

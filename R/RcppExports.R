@@ -5,8 +5,8 @@ getCoverage <- function(pos, width, length) {
     .Call(`_RealReadSim_getCoverage`, pos, width, length)
 }
 
-evalCoverage <- function(pos, width, length, seq) {
-    .Call(`_RealReadSim_evalCoverage`, pos, width, length, seq)
+evalCoverage <- function(pos, width, length, seq, minContigLength) {
+    .Call(`_RealReadSim_evalCoverage`, pos, width, length, seq, minContigLength)
 }
 
 meanCovToRange <- function(ranges, coverage) {

@@ -86,7 +86,7 @@ public:
       }
     }
 
-    std::vector<int> assembleTestContigs(){
+    std::vector<int> assembleTestContigs(int minContigLength){
 
         for(int i = 0;i < length; i++){
             cov[i] = 0;
@@ -115,18 +115,25 @@ public:
         int n = length/2;
 
         res.reserve(n);
+        n = 0;
         bool switching = true;
         for(int i = 0;i < length;i++){
           if(*(cov +i) > 0 && switching){
-            res.push_back(i);
+            n = i +1;
             switching = false;
           }
-          if(!(*(cov +i) > 0) && !switching){
-            res.push_back(i-1);
+          if(*(cov +i) <= 0 && !switching){
             switching = true;
+            if(i -n >= minContigLength){
+              res.push_back(n);
+              res.push_back(i);
+            }
           }
           if(*(cov +i) > 0 && i == length -1){
-            res.push_back(i);
+            if(i -n >= minContigLength){
+              res.push_back(n);
+              res.push_back(i);
+            }
           }
         }
         return res;
