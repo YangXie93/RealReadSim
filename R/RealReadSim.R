@@ -168,62 +168,63 @@ coAssembleRRSDS <- function(contigs){
 
   RRSDS = "~/RealReadSimDS/"
   crossmaps = dir(paste(RRSDS,"Crossmaps",sep = ""))
+  if(length(crossmaps) > 0){
+    seqNames = contigs[[3]]
 
-  seqNames = contigs[[3]]
+    partners = as.data.frame(strsplit(crossmaps,"_X_|\\.Rds"))
 
-  partners = as.data.frame(strsplit(crossmaps,"_X_|\\.Rds"))
+    pairs = list()
+    whichFile = list()
+    for(i in 1:length(seqNames)){
 
-  pairs = list()
-  whichFile = list()
-  for(i in 1:length(seqNames)){
+      col1 = which(partners[1,] == seqNames[i])
+      col2 = which(partners[2,] == seqNames[i])
 
-    col1 = which(partners[1,] == seqNames[i])
-    col2 = which(partners[2,] == seqNames[i])
+      other1 = partners[2,col1]
+      other2 = partners[1,col2]
 
-    other1 = partners[2,col1]
-    other2 = partners[1,col2]
+      partners = partners[-c(col1,col2)]
 
-    partners = partners[-c(col1,col2)]
+      other = c(other1,other2)
+      whichFile[[i]] = c(col1,col2)
+      pairs[[i]] = which(seqNames %in% other)
+    }
 
-    other = c(other1,other2)
-    whichFile[[i]] = c(col1,col2)
-    pairs[[i]] = which(seqNames %in% other)
-  }
+    res = list()
+    conts = list()
+    mCov = list()
 
-  res = list()
-  conts = list()
-  mCov = list()
+    for(i in 1:length(pairs)){
+      if(length(pairs[[i]]) > 0){
+        for(j in 1:length(pairs[[i]])){
+          file = crossmaps[whichFile[[i]][j]]
+          crossmap = readRDS(paste(RRSDS,"Crossmaps/",file,sep = ""))
 
-  for(i in 1:length(pairs)){
-    if(length(pairs[[i]]) > 0){
-      for(j in 1:length(pairs[[i]])){
-        file = crossmaps[whichFile[[i]][j]]
-        crossmap = readRDS(paste(RRSDS,"Crossmaps/",file,sep = ""))
+          reads1 = crossmap[ findOverlaps(crossmap[[seqNames[i]]],contigs[[1]][[i]])]
+          reads2 = crossmap[findOverlaps(crossmap[[seqNames[pairs[[i]][j]]]],contigs[[1]][[pairs[[i]][j]]])]
 
-        reads1 = crossmap[ findOverlaps(crossmap[[seqNames[i]]],contigs[[1]][[i]])]
-        reads2 = crossmap[findOverlaps(crossmap[[seqNames[pairs[[i]][j]]]],contigs[[1]][[pairs[[i]][j]]])]
+          overlaps1 = reduce(overlapsRanges(contigs[[1]][[i]],reads1))
+          overlaps2 = reduce(overlapsRanges(contigs[[1]][[pairs[[i]][j]]],reads2))
 
-        overlaps1 = reduce(overlapsRanges(contigs[[1]][[i]],reads1))
-        overlaps2 = reduce(overlapsRanges(contigs[[1]][[pairs[[i]][j]]],reads2))
-
-        if(length(reads1) > 0){
-
-
-          matching1 = overlapsRanges(contigs[[1]][[i]],reads1)
-          matching2 = overlapsRanges(contigs[[1]][[pairs[[i]][j]]],reads2)
+          if(length(reads1) > 0){
 
 
+            matching1 = overlapsRanges(contigs[[1]][[i]],reads1)
+            matching2 = overlapsRanges(contigs[[1]][[pairs[[i]][j]]],reads2)
 
-        }
-        else{
-          conts = contigs[[1]][[i]]
-          mCov = contigs[[2]][[i]]
+
+
+          }
+          else{
+            conts = contigs[[1]][[i]]
+            mCov = contigs[[2]][[i]]
+          }
         }
       }
+      else{
+        conts = contigs[[1]][[i]]
+        mCov = contigs[[2]][[i]]
+      }
     }
-    else{
-      conts = contigs[[1]][[i]]
-      mCov = contigs[[2]][[i]]
-    }
-  }
+  S}
 }
