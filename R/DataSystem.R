@@ -317,3 +317,4 @@ IRangesTranslator <- function(reads1,reads2){
   print(Sys.time() -y)
   return(res)
 }
+####
