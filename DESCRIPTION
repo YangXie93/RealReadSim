@@ -8,12 +8,13 @@ Description: This package uses SRA reads maped onto their genomes by bowtie2 to 
 License: GPL (>=2)
 Encoding: UTF-8
 LazyData: true
-depends: Rsamtools, data.table
+depends: Rsamtools, data.table, seqinr
 linkedTo: Rcpp
 NeedsCompilation: yes
 Packaged: 2019-09-01 17:28:47 UTC; yang
 Imports: 
     Rsamtools,
     data.table,
-    Rcpp
-RoxygenNote: 6.1.1
+    Rcpp,
+    seqinr
+RoxygenNote: 7.0.2

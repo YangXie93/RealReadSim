@@ -20,27 +20,18 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
 
     covAt = 1
-    temp = list()
 
-    rangs = list()
-    mCov = list()
-    nms = c()
-
-    cov = list()
     params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)  #(?) mapqFilter
     seqNames = c()
-    tempNames = list()
 
     for(i in 1:length(filenames[,1])){          # reading in the names of all sequences involved
         if(readAsBams){                         # reading from bam files
-            tempNames[[i]] = scanBamHeader(filenames[i,2])[[1]]$targets
-            seqNames[i] = names(tempNames[[i]][which.max(tempNames[[i]])])
-            tempNames[[i]] = names(tempNames[[i]])
+            tempNames = scanBamHeader(filenames[i,2])[[1]]$targets
+            seqNames[i] = names(tempNames[which.max(tempNames)])
         }
         else{                                   # reading from fasta files
             seqData = readDNAStringSet(filenames[i,1])
-            tempNames[[i]] = gsub(" .*","",names(seqData))
-            seqNames[i] = tempNames[[i]][which.max(widht(seqData))]
+            seqNames[i] = gsub(" .*","",names(seqData))[which.max(widht(seqData))]
         }
     }
 
@@ -52,7 +43,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     else{
         if(length(filenames[,2][grep(" ",filenames[,2])]) > 0){
             catalogue = RealReadSim::addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = gsub(".*","",filenames[,2]),fastq2 = gsub(".* ","",filenames[,2]),minMapq = minMapq,bowtieOptions)
-         }
+        }
         else{
             catalogue = RealReadSim::addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],minMapq = minMapq,bowtieOptions)
         }
@@ -60,53 +51,33 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
 
     #------------------------------------------------------------------------------------------------------------
 
-    print(tempNames)############################################################################################
-
     #-------------------------------- assembly --------------------------------------------------------
     RRSDS = "~/RealReadSimDS"
-    print(length(seqNames))############################################################################
-    for(i in 1:length(tempNames)){
 
-        print("readiying the data")##################################################################
-
-        #--------------------------- readiyng the data -----------------------------------------------------
-        seqData = readDNAStringSet(as.character(catalogue$fastaName[i]))
-
-        print(length(seqData))#################################################################
-        print("get and save contigs")###########################################################
-
-        #-------------------------- get and save the contigs -----------------------------------------------
-        for(j in 1:length(tempNames[[i]])){
-            print(paste(RRSDS,"/",seqNames[i],"/",tempNames[[i]][j],".Rds",sep =""))
-
-            ttt = Sys.time()###################################################################
-
-            data = readRDS(paste(RRSDS,"/",seqNames[i],"/",tempNames[[i]][j],".Rds",sep =""))
-
-            print(Sys.time() -ttt)#########################################################################
-            ttt = Sys.time()########################################
-
-            data = data.table(pos = start(data),width = width(data),DNAString = names(data))
-
-            print(Sys.time() -ttt)#################################################
-
-            data = RealReadSim::randomReads(data,catalogue$totalLength[i],coverage = coverage[covAt],meanWidht = mean(data$width),repeatable,seed,redraw)
-
-            print(substr(names(seqData),1,nchar(tempNames[[i]][j])))
-            print(tempNames[[i]][j])
-
-            partialSeqData = seqData[substr(names(seqData),1,nchar(tempNames[[i]][j])) == tempNames[[i]][j]]
-
+    starts = list()
+    ends = list()
+    mCov = list()
+    sdCov = list()
+    seqs = list()
+    DS = unique(catalogue$dir)
+    n = 1
+    for(i in 1:length(DS)){
+        partialCatalogue = subset(catalogue,dir == DS[i])
+        fullData = readRDS(partialCatalogue$data[1])
+        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw)
+        for(j in 1:length(partialCatalogue$name)){
+            data = subset(fullData,seq == partialCatalogue$name[j])
             if(length(data$pos) > 0){
 
-                print(length(partialSeqData))###############################################################
-
-                cov[[length(cov) +1]] = RealReadSim::getCoverage(data$pos,data$width,partialSeqData@ranges@width[1])
-                contigs = RealReadSim::evalCoverage(data$pos, data$width, partialSeqData@ranges@width[1],toString(partialSeqData[[1]]),minContigLength)
+                contigs = RealReadSim::evalCoverage(data$pos, data$width, partialCatalogue$length[j],partialCatalogue$minOverlap[j],minContigLength)
                 if(length(contigs) > 0){
-                    rangs[[length(rangs) +1]] = IRanges(start = contigs[seq(1,length(contigs),2)],end = contigs[seq(2,length(contigs),2)])
-                    mCov[[length(mCov) +1]] = RealReadSim::meanCovToRange(contigs,cov[[length(cov)]])
-                    nms[[length(nms) +1]] = tempNames[[i]][j]
+                    starts[[n]] = contigs[[1]]
+                    ends[[n]] = contigs[[2]]
+                    mCov[[n]] = contigs[[3]]
+                    sdCov[[n]] = contigs[[4]]
+                    seqs[[n]] = rep(partialCatalogue$seq[j],length(contigs[[1]]))
+                    print(seqs[[n]])
+                    n = n+1
                 }
             }
         }
@@ -115,116 +86,75 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         }
         print(Sys.time() -starttime)#################################################################
     }
-  temp = list(rangs,mCov,nms)
-  print("co-assembly")################################################################################
+    temp = data.table(start = unlist(starts),end = unlist(ends),meanCov = unlist(mCov),sdCov = unlist(sdCov),seqName = unlist(seqs))
+    print("co-assembly")################################################################################
 
-  #----------------------------------- co-assembly ----------------------------------------------------
+    #----------------------------------- co-assembly ----------------------------------------------------
 
-  #res = coAssembleRRSDS(temp)
+    #res = coAssembleRRSDS(temp)
 
-  if(humanReadable){
-    #RealReadSim::makeHumanReadable(cov,res)
-  }
-  return(temp)
+    if(humanReadable){
+        #RealReadSim::makeHumanReadable(cov,res)
+    }
+    print(Sys.time() -starttime)#################################################################
+    return(temp)
 }
 
 
 makeHumanReadable <- function(cov,res){
-  par(mfrow = c(2,1))
-  x = seq(1,length(res),by = 3)
-  for(i in 1:length(cov)){
-    cov[[i]] = RealReadSim::slidingWindowMaker(cov[[i]])
-    pdf(paste(names(res[[x[i]]][1]),".pdf",sep = ""))
-    plot.default(x = cov[[i]],y = c(1:length(cov[[i]])),type = "l",xlab = "Coverage",ylab = "Position")
-    hist(width(res[[x[i]]]),border = "black",col = "red",breaks = 50,xlab = "Contig Länge",main = "Contig Längenhistogramm")
-    abline(v = res[[x[i] +2]],col = "blue")
-    dev.off()
-  }
-  par(mfrow = c(1,1))
+    par(mfrow = c(2,1))
+    x = seq(1,length(res),by = 3)
+    for(i in 1:length(cov)){
+        cov[[i]] = RealReadSim::slidingWindowMaker(cov[[i]])
+        pdf(paste(names(res[[x[i]]][1]),".pdf",sep = ""))
+        plot.default(x = cov[[i]],y = c(1:length(cov[[i]])),type = "l",xlab = "Coverage",ylab = "Position")
+        hist(width(res[[x[i]]]),border = "black",col = "red",breaks = 50,xlab = "Contig Länge",main = "Contig Längenhistogramm")
+        abline(v = res[[x[i] +2]],col = "blue")
+        dev.off()
+    }
+    par(mfrow = c(1,1))
 }
 
 
+randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw){
 
-seqsAsTempoaryData <- function(filenames){
-  temp = list()
-  for(i in 1:length(filenames)){
-    temp[[i]] = sequenceAndLength(filenames[i])
-  }
-  seqs = c()
-  lengths = c()
-  DNAString = c()
-
-  for(i in 1:length(temp)){
-    seqs = append(seqs,temp[[i]]$seq)
-    lengths = append(lengths,temp[[i]]$length)
-    DNAString = append(DNAString,temp[[i]]$DNAString)
-  }
-
-  return(data.frame(seqs = seqs,lengths = lengths,DNAString = DNAString,stringsAsFactors = FALSE))
-}
-
-
-coAssembleRRSDS <- function(contigs){
-
-  RRSDS = "~/RealReadSimDS/"
-  crossmaps = dir(paste(RRSDS,"Crossmaps",sep = ""))
-  if(length(crossmaps) > 0){
-    seqNames = contigs[[3]]
-
-    partners = as.data.frame(strsplit(crossmaps,"_X_|\\.Rds"))
-
-    pairs = list()
-    whichFile = list()
-    for(i in 1:length(seqNames)){
-
-      col1 = which(partners[1,] == seqNames[i])
-      col2 = which(partners[2,] == seqNames[i])
-
-      other1 = partners[2,col1]
-      other2 = partners[1,col2]
-
-      partners = partners[-c(col1,col2)]
-
-      other = c(other1,other2)
-      whichFile[[i]] = c(col1,col2)
-      pairs[[i]] = which(seqNames %in% other)
+    numberOfReads = as.integer((sum(seqLength) *coverage)/meanWidht)
+    if(repeatable){
+        set.seed(seed)
+    }
+    if(numberOfReads > length(data$pos) && !redraw){
+        whch = 1:length(data$pos)
+    }
+    else{
+        whch = sample(1:length(data$pos),numberOfReads,replace = redraw)
     }
 
-    res = list()
-    conts = list()
-    mCov = list()
 
-    for(i in 1:length(pairs)){
-      if(length(pairs[[i]]) > 0){
-        for(j in 1:length(pairs[[i]])){
-          file = crossmaps[whichFile[[i]][j]]
-          crossmap = readRDS(paste(RRSDS,"Crossmaps/",file,sep = ""))
-
-          reads1 = crossmap[ findOverlaps(crossmap[[seqNames[i]]],contigs[[1]][[i]])]
-          reads2 = crossmap[findOverlaps(crossmap[[seqNames[pairs[[i]][j]]]],contigs[[1]][[pairs[[i]][j]]])]
-
-          overlaps1 = reduce(overlapsRanges(contigs[[1]][[i]],reads1))
-          overlaps2 = reduce(overlapsRanges(contigs[[1]][[pairs[[i]][j]]],reads2))
-
-          if(length(reads1) > 0){
+    res = data[whch,]
+    return(res)
+}
 
 
-            matching1 = overlapsRanges(contigs[[1]][[i]],reads1)
-            matching2 = overlapsRanges(contigs[[1]][[pairs[[i]][j]]],reads2)
+slidingWindowMaker <- function(vec){
+    res = c()
+    size = 1
+    n = 1
 
-
-
-          }
-          else{
-            conts = contigs[[1]][[i]]
-            mCov = contigs[[2]][[i]]
-          }
+    while(size <=  length(vec)/10000 ){
+        size = size *10
+    }
+    if(size > 1){
+        for(i in seq(1,length(vec),by = size/2)){
+            if(i + size -1 > length(vec)){
+                x = length(vec)
+            }
+            else{
+                x = (i +size -1)
+            }
+            res[n] = mean(vec[i:x ])
+            n = n +1
         }
-      }
-      else{
-        conts = contigs[[1]][[i]]
-        mCov = contigs[[2]][[i]]
-      }
     }
-  S}
+
+    return(res)
 }

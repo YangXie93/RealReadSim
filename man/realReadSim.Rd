@@ -4,10 +4,18 @@
 \alias{realReadSim}
 \title{realReadSim}
 \usage{
-realReadSim(filenames_csv, coverage, bowtieOptions = "--no-unal",
-  humanReadable = FALSE, readAsBams = TRUE, minMapq = 40,
-  redraw = FALSE, repeatable = FALSE, seed = 0,
-  minContigLength = 10000)
+realReadSim(
+  filenames_csv,
+  coverage,
+  bowtieOptions = "--no-unal",
+  humanReadable = FALSE,
+  readAsBams = TRUE,
+  minMapq = 40,
+  redraw = FALSE,
+  repeatable = FALSE,
+  seed = 0,
+  minContigLength = 10000
+)
 }
 \arguments{
 \item{filenames_csv}{This parameter takes the name of a file in which the names of the fasta files and the name of the bam or fastq files and or the bowtie prebuild name are contained}

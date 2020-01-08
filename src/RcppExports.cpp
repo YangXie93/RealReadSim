@@ -5,6 +5,18 @@
 
 using namespace Rcpp;
 
+// calcMinOverlap
+int calcMinOverlap(std::string seq, int meanWidth);
+RcppExport SEXP _RealReadSim_calcMinOverlap(SEXP seqSEXP, SEXP meanWidthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< int >::type meanWidth(meanWidthSEXP);
+    rcpp_result_gen = Rcpp::wrap(calcMinOverlap(seq, meanWidth));
+    return rcpp_result_gen;
+END_RCPP
+}
 // getCoverage
 std::vector<int> getCoverage(std::vector<int>& pos, std::vector<int>& width, int length);
 RcppExport SEXP _RealReadSim_getCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP) {
@@ -19,17 +31,32 @@ BEGIN_RCPP
 END_RCPP
 }
 // evalCoverage
-std::vector<int> evalCoverage(std::vector<int>& pos, std::vector<int>& width, int length, std::string seq, int minContigLength);
-RcppExport SEXP _RealReadSim_evalCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP, SEXP seqSEXP, SEXP minContigLengthSEXP) {
+List evalCoverage(std::vector<int>& pos, std::vector<int>& width, int length, int minOverlap, int minContigLength);
+RcppExport SEXP _RealReadSim_evalCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP, SEXP minOverlapSEXP, SEXP minContigLengthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<int>& >::type pos(posSEXP);
     Rcpp::traits::input_parameter< std::vector<int>& >::type width(widthSEXP);
     Rcpp::traits::input_parameter< int >::type length(lengthSEXP);
-    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< int >::type minOverlap(minOverlapSEXP);
     Rcpp::traits::input_parameter< int >::type minContigLength(minContigLengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(evalCoverage(pos, width, length, seq, minContigLength));
+    rcpp_result_gen = Rcpp::wrap(evalCoverage(pos, width, length, minOverlap, minContigLength));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getIdenticalSeqs
+List getIdenticalSeqs(std::vector<int>& starts1, std::vector<int>& ends1, std::vector<int>& starts2, std::vector<int>& ends2, int minL);
+RcppExport SEXP _RealReadSim_getIdenticalSeqs(SEXP starts1SEXP, SEXP ends1SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP minLSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<int>& >::type starts1(starts1SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type ends1(ends1SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type starts2(starts2SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type ends2(ends2SEXP);
+    Rcpp::traits::input_parameter< int >::type minL(minLSEXP);
+    rcpp_result_gen = Rcpp::wrap(getIdenticalSeqs(starts1, ends1, starts2, ends2, minL));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -62,8 +89,10 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_RealReadSim_calcMinOverlap", (DL_FUNC) &_RealReadSim_calcMinOverlap, 2},
     {"_RealReadSim_getCoverage", (DL_FUNC) &_RealReadSim_getCoverage, 3},
     {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 5},
+    {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 5},
     {"_RealReadSim_meanCovToRange", (DL_FUNC) &_RealReadSim_meanCovToRange, 2},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
     {NULL, NULL, 0}

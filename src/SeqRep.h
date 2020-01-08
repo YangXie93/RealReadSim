@@ -4,6 +4,9 @@
 #include <list>
 #include <vector>
 #include <iostream>
+#include <algorithm>
+#include <Rcpp.h>
+#include <math.h>
 
 /* das SeqRep Objekt ist eine abstrakte Darstellung einer Sequenz, auf die eine bestimmte Menge an Reads gemapped
    wird. In dem Objekt ist ein array "cov" der Laenge ("length") der Sequenz auf die gemapped wurde. "cov" ist ein integerarray.
@@ -14,7 +17,7 @@
    Es gibt eine Funktion zur Eingabe von Reads, eine Zur Auswertung der erhobenen Daten und einen constructor.
 */
 
-
+//[[Rcpp::plugins(cpp11)]]
 class SeqRep{
 public:
     //constructor
@@ -86,7 +89,7 @@ public:
       }
     }
 
-    std::vector<int> assembleTestContigs(int minContigLength){
+    Rcpp::List assembleTestContigs(int minContigLength){
 
         for(int i = 0;i < length; i++){
             cov[i] = 0;
@@ -111,11 +114,13 @@ public:
 
         std::cout << (int) pos->size() -diff << " reads were sorted out.\n";
 
-        std::vector<int> res;
-        int n = length/2;
+        std::vector<int> starts;
+        std::vector<int> ends;
+        std::vector<double> covs;
+        std::vector<double> covSD;
+        double mean;
 
-        res.reserve(n);
-        n = 0;
+        int n = 0;
         bool switching = true;
         for(int i = 0;i < length;i++){
           if(*(cov +i) > 0 && switching){
@@ -125,18 +130,37 @@ public:
           if(*(cov +i) <= 0 && !switching){
             switching = true;
             if(i -n >= minContigLength){
-              res.push_back(n);
-              res.push_back(i);
+              starts.push_back(n);
+              ends.push_back(i);
+              mean = meanCovOnRange(n,i);
+              covs.push_back(mean);
+              covSD.push_back(SDCovOnRange(n,i,mean));
             }
           }
           if(*(cov +i) > 0 && i == length -1){
             if(i -n >= minContigLength){
-              res.push_back(n);
-              res.push_back(i);
+              starts.push_back(n);
+              ends.push_back(i);
+              mean = meanCovOnRange(n,i);
+              covs.push_back(mean);
+              covSD.push_back(SDCovOnRange(n,i,mean));
             }
           }
         }
+        Rcpp::List res = Rcpp::List::create(Rcpp::Named("start") = starts,Rcpp::Named("end") = ends,Rcpp::Named("mean") = covs,Rcpp::Named("sd") = covSD);
         return res;
+    }
+
+    double meanCovOnRange(int start,int end){
+      return std::accumulate(cov+start,cov+end,0)/double (end-start);
+    }
+
+    double SDCovOnRange(int start,int end,double mean){
+      std::vector<double> tmp;
+      for(int i = start;i <= end;i++){
+        tmp.push_back(std::pow((*(cov+i)-mean),2) );
+      }
+      return std::sqrt(std::accumulate(tmp.begin(),tmp.end(),0)/(end-start));
     }
 
     //getter fuer Length
@@ -175,7 +199,7 @@ private:
     int** ids;
 };
 
-
+//[[Rcpp::export]]
 int calcMinOverlap(std::string seq,int meanWidth){
   int bases[] = {0,0,0,0};
   for(int i = 0;i < (int) seq.size();i++ ){
