@@ -60,18 +60,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// meanCovToRange
-std::list< std::vector<int> > meanCovToRange(std::vector<int> ranges, std::vector<int> coverage);
-RcppExport SEXP _RealReadSim_meanCovToRange(SEXP rangesSEXP, SEXP coverageSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<int> >::type ranges(rangesSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type coverage(coverageSEXP);
-    rcpp_result_gen = Rcpp::wrap(meanCovToRange(ranges, coverage));
-    return rcpp_result_gen;
-END_RCPP
-}
 // sequenceToFastaReads
 bool sequenceToFastaReads(std::vector<int>& starts, std::string& sequence, int meanWidth, std::string& newFasta, std::string& nameTag);
 RcppExport SEXP _RealReadSim_sequenceToFastaReads(SEXP startsSEXP, SEXP sequenceSEXP, SEXP meanWidthSEXP, SEXP newFastaSEXP, SEXP nameTagSEXP) {
@@ -93,7 +81,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RealReadSim_getCoverage", (DL_FUNC) &_RealReadSim_getCoverage, 3},
     {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 5},
     {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 5},
-    {"_RealReadSim_meanCovToRange", (DL_FUNC) &_RealReadSim_meanCovToRange, 2},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
     {NULL, NULL, 0}
 };

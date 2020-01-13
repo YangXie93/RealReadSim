@@ -22,22 +22,42 @@ class SeqRep{
 public:
     //constructor
     SeqRep(int length,int minOverlap,std::vector<int> *pos,std::vector<int> *width){
+
         this->length = length;
         this->minOverlap = minOverlap;
-        this->pos = pos;
-        this->width = width;
-        ids = new int*[(int) pos->size()];
+        nr = (int) pos->size();
+        readStarts = new int*[nr];
+        readEnds = new int*[nr];
         cov = new int[length];
-        for(int i = 0;i < length; i++){
-          cov[i] = 0;                           //Die Elemente des Array werden alle auf 0 gesetzt
+
+        std::fill(cov,cov+length-1,0);
+
+        std::vector<int>::iterator posIt = pos->begin();
+        std::vector<int>::iterator widthIt = width->begin();
+        for(int i = 0;i < nr;i++){
+
+          int* start = cov+(*posIt);
+          int* end = start +(*widthIt)-1;
+          if(end >= cov+length){
+            end = end-length;
+          }
+
+          addToCov(start,end,1);
+          *(readStarts+i) = start;
+          *(readEnds+i) = end;
+          posIt++;
+          widthIt++;
         }
-        construct();
+
+        evalOverlap();
     }
 
     ~SeqRep(){
-        delete[] ids;
+        delete[] readStarts;
+        delete[] readEnds;
         delete[] cov;
     }
+
 
     //Funktion zum auswerten des overlaps
     /* Bei jedem Read bei dem Eine Stelle auf die er gemapped wurde >= "coverage" ist werden hier diese Stellen gezaehlt.
@@ -45,115 +65,121 @@ public:
        Sind dann alle Stellen des Reads abgearbeitet werden die "counts" ueberprueft, ob mindestens einer davon dem
        "minOverlap" entspricht. Ist dies nicht der Fall wird der vorher zugeordnete boolean wert wieder umgedreht.
     */
-    void evalOverlap(std::vector<bool>&  reads){    //Das Ergebnis aus evalCov() wird hier eingegeben
-      which = &reads;
+    void evalOverlap(){    //Das Ergebnis aus evalCov() wird hier eingegeben
+
       int count = 0;
-      int size = (int) pos ->size();
-      reads.reserve(size);
-      int* read;
-      int best = 0;
-      int n;
+      int* start;
+      int* end;
+      int* tmp;
+      int best;
+      int sortedOut = 0;
 
-
-
-      for(int i = 0;i < size;i++){
-          read = ids[i];
-          for(int j = 0;j < width[0][i];j++){
-            n = 0;
-            if(pos[0][i] +j >= length){
-                n = length;
-            }
-
-            if(*(read +j -n) > 1){ //check, ob an der Stelle die coverage stimmt
-                count++;
+      for(int i = 0;i < nr;i++){
+          start = *(readStarts+i);
+          end = *(readEnds+i);
+          tmp = start;
+          while(start != end+1 && tmp != end+1){
+            if(*tmp > 1){
+              count++;
             }
             else{
-                if(count > best){
-                  best = count;
-                }
-                count = 0;
+              if(count > best){
+                best = count;
               }
-          }
-
-          if(count > best){
-            best = count;
+              count = 0;
+            }
+            start++;
+            tmp++;
+            if(tmp >= cov+length){
+              tmp = cov;
+            }
           }
           if(best >= minOverlap){
-              reads.push_back(true);
-          }
-          else{
-              reads.push_back(false);
+            addToCov(*(readStarts+i),end,-1);
+            sortedOut++;
           }
           count = 0;
           best = 0;
       }
+      Rcpp::Rcout << sortedOut << " reads have been sorted out\n";
     }
+
 
     Rcpp::List assembleTestContigs(int minContigLength){
 
-        for(int i = 0;i < length; i++){
-            cov[i] = 0;
-        }
-
-        int diff = 0;
-
-        for(int i = 0;i < (int) pos->size();i++){
-            if(which[0][i]){
-                for(int j = 0;j < width[0][i];j++){
-                  if((pos[0][i] +j) < length){
-                      cov[pos[0][i] +j]++;
-                  }
-                  else{
-                      cov[pos[0][i] +j -length]++;
-                  }
-                }
-                ids[i] = &cov[pos[0][i]];
-                diff++;
-            }
-        }
-
-        std::cout << (int) pos->size() -diff << " reads were sorted out.\n";
-
         std::vector<int> starts;
         std::vector<int> ends;
-        std::vector<double> covs;
+        std::vector<double> mCovs;
         std::vector<double> covSD;
+        Rcpp::List covs;
         double mean;
 
-        int n = 0;
-        bool switching = true;
-        for(int i = 0;i < length;i++){
-          if(*(cov +i) > 0 && switching){
-            n = i +1;
-            switching = false;
-          }
-          if(*(cov +i) <= 0 && !switching){
-            switching = true;
-            if(i -n >= minContigLength){
-              starts.push_back(n);
-              ends.push_back(i);
-              mean = meanCovOnRange(n,i);
-              covs.push_back(mean);
-              covSD.push_back(SDCovOnRange(n,i,mean));
-            }
-          }
-          if(*(cov +i) > 0 && i == length -1){
-            if(i -n >= minContigLength){
-              starts.push_back(n);
-              ends.push_back(i);
-              mean = meanCovOnRange(n,i);
-              covs.push_back(mean);
-              covSD.push_back(SDCovOnRange(n,i,mean));
-            }
-          }
+        int* covIt = cov;
+        int i = 0;
+        int* it;
+
+        while(*covIt > 0 && i < length){
+          covIt++;
+          i++;
         }
-        Rcpp::List res = Rcpp::List::create(Rcpp::Named("start") = starts,Rcpp::Named("end") = ends,Rcpp::Named("mean") = covs,Rcpp::Named("sd") = covSD);
+
+        if(covIt == cov+length-1){
+          starts.push_back(1);
+          ends.push_back(length);
+          mean = meanCovOnRange(1,length);
+          mCovs.push_back(mean);
+          covSD.push_back(SDCovOnRange(1,length,mean));
+          covs.push_back(std::vector<int> (cov,cov+length-1));
+        }
+        else{
+
+          int n = 0;
+          bool switching = true;
+
+          if(covIt == cov){
+            it = cov;
+            covIt = cov+length-1;
+          }
+          else{
+            it = covIt+1;
+          }
+          i = it-cov;
+
+          while(it != covIt){
+            if(*(it) > 0 && switching){
+              n = i;
+              switching = false;
+            }
+            if(*(it) == 0 && !switching){
+              switching = true;
+              if(i -n >= minContigLength){
+                starts.push_back(n+1);
+                ends.push_back(i+1);
+                mean = meanCovOnRange(n,i);
+                mCovs.push_back(mean);
+                covSD.push_back(SDCovOnRange(n,i,mean));
+                covs.push_back(std::vector<int> (cov+n,cov+i));
+              }
+            }
+
+            it++;
+            i++;
+            if(it >= cov+length){
+              it = cov;
+              i = 0;
+            }
+          }
+
+        }
+        Rcpp::List res = Rcpp::List::create(starts, ends, covs, mCovs, covSD);
         return res;
     }
+
 
     double meanCovOnRange(int start,int end){
       return std::accumulate(cov+start,cov+end,0)/double (end-start);
     }
+
 
     double SDCovOnRange(int start,int end,double mean){
       std::vector<double> tmp;
@@ -163,40 +189,43 @@ public:
       return std::sqrt(std::accumulate(tmp.begin(),tmp.end(),0)/(end-start));
     }
 
+
     //getter fuer Length
     int getLength(){
         return length;
     }
+
+
     //getter fuer cov
     int* getCov(){
       return cov;
     }
 
 
-private:
+    void addToCov(int* start,int* end,int val){
 
-    void construct(){
-        for(int i = 0;i < (int) pos->size();i++){
-            for(int j = 0;j < width[0][i];j++){
-              if((pos[0][i] +j) < length){
-                  cov[pos[0][i] +j]++;
-              }
-              else{
-                  cov[pos[0][i] +j -length]++;
-              }
-            }
-            ids[i] = &cov[pos[0][i]];
+      int* tmp = start;
+      int x = 1;
+      while(start != end+1 && tmp != end+1){
+        (*tmp) += val;
+        tmp++;
+        start++;
+        x++;
+        if(tmp >= cov+length){
+          tmp = cov;
         }
+      }
     }
 
 
-    std::vector<bool> *which;
-    std::vector<int> *pos;
-    std::vector<int> *width;
+private:
+
     int minOverlap;
     int length;
+    int nr;
     int* cov;
-    int** ids;
+    int** readStarts;
+    int** readEnds;
 };
 
 //[[Rcpp::export]]

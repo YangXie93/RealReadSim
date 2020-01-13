@@ -14,7 +14,11 @@
 #' @param seed A integer value used as seed when reapeatable = TRUE
 #' @export
 
-realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = FALSE,seed = 0,minContigLength = 10000){
+realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 5000){
+
+    library(Rsamtools)
+    library(data.table)
+    library(seqinr)
 
     starttime = Sys.time()
     filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
@@ -59,6 +63,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     mCov = list()
     sdCov = list()
     seqs = list()
+    cov = list()
     DS = unique(catalogue$dir)
     n = 1
     for(i in 1:length(DS)){
@@ -68,15 +73,15 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         for(j in 1:length(partialCatalogue$name)){
             data = subset(fullData,seq == partialCatalogue$name[j])
             if(length(data$pos) > 0){
-
+                print(paste(length(data$pos)," reads have been selected"))
                 contigs = RealReadSim::evalCoverage(data$pos, data$width, partialCatalogue$length[j],partialCatalogue$minOverlap[j],minContigLength)
-                if(length(contigs) > 0){
+                if(length(contigs[[1]]) > 0){
                     starts[[n]] = contigs[[1]]
                     ends[[n]] = contigs[[2]]
-                    mCov[[n]] = contigs[[3]]
-                    sdCov[[n]] = contigs[[4]]
-                    seqs[[n]] = rep(partialCatalogue$seq[j],length(contigs[[1]]))
-                    print(seqs[[n]])
+                    cov = append(cov,contigs[[3]])
+                    mCov[[n]] = contigs[[4]]
+                    sdCov[[n]] = contigs[[5]]
+                    seqs[[n]] = rep(partialCatalogue$name[j],length(contigs[[1]]))
                     n = n+1
                 }
             }
@@ -86,7 +91,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         }
         print(Sys.time() -starttime)#################################################################
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),meanCov = unlist(mCov),sdCov = unlist(sdCov),seqName = unlist(seqs))
+    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),sdCov = unlist(sdCov),seqName = unlist(seqs))
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
@@ -98,6 +103,26 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     }
     print(Sys.time() -starttime)#################################################################
     return(temp)
+}
+
+coAssemleRRSDS <- function(Contigs){
+
+    RRSDS = paste0(Sys.getenv("HOME"),"/RealReadSimDS/")
+
+    involved = unique(contigs$seqName)
+
+    crossmaps = dir(paste0(RRSDS,"Crossmaps"))
+    tmp = unlist(strsplit(crossmaps,"_X_|.Rds"))
+    col1 = tmp[seq(1,length(tmp),2)]
+    col2 = tmp[seq(2,length(tmp),2)]
+
+    table = data.table(name1 = col1,name2 = col2,name1IsIn = (col1 %in% involved),name2IsIn = (col2 %in% involved),path = paste0(RRSDS,"Crossmaps/",crossmaps))
+    table = subset(table,name1IsIn && name2IsIn)
+
+    for(i in 1:length(table$name1)){
+        same = readRDS(table$path[i])
+    }
+
 }
 
 
@@ -139,7 +164,6 @@ slidingWindowMaker <- function(vec){
     res = c()
     size = 1
     n = 1
-
     while(size <=  length(vec)/10000 ){
         size = size *10
     }
@@ -155,6 +179,5 @@ slidingWindowMaker <- function(vec){
             n = n +1
         }
     }
-
     return(res)
 }

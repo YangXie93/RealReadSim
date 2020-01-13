@@ -17,10 +17,6 @@ getIdenticalSeqs <- function(starts1, ends1, starts2, ends2, minL = 0L) {
     .Call(`_RealReadSim_getIdenticalSeqs`, starts1, ends1, starts2, ends2, minL)
 }
 
-meanCovToRange <- function(ranges, coverage) {
-    .Call(`_RealReadSim_meanCovToRange`, ranges, coverage)
-}
-
 sequenceToFastaReads <- function(starts, sequence, meanWidth, newFasta, nameTag) {
     .Call(`_RealReadSim_sequenceToFastaReads`, starts, sequence, meanWidth, newFasta, nameTag)
 }

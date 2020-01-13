@@ -12,7 +12,7 @@ realReadSim(
   readAsBams = TRUE,
   minMapq = 40,
   redraw = FALSE,
-  repeatable = FALSE,
+  repeatable = TRUE,
   seed = 0,
   minContigLength = 10000
 )
