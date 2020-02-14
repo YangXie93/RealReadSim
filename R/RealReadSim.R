@@ -14,7 +14,7 @@
 #' @param seed A integer value used as seed when reapeatable = TRUE
 #' @export
 
-realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 5000){
+realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500){
 
     library(Rsamtools)
     library(data.table)
@@ -121,6 +121,8 @@ coAssemleRRSDS <- function(Contigs){
 
     for(i in 1:length(table$name1)){
         same = readRDS(table$path[i])
+        conts = contigs[seqName == table$name1[i] || seqName == table$name2[i]]
+
     }
 
 }
