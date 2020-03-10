@@ -5,8 +5,16 @@ calcMinOverlap <- function(seq, meanWidth) {
     .Call(`_RealReadSim_calcMinOverlap`, seq, meanWidth)
 }
 
-getCoverage <- function(pos, width, length) {
-    .Call(`_RealReadSim_getCoverage`, pos, width, length)
+subSeqs <- function(seq, starts, ends) {
+    .Call(`_RealReadSim_subSeqs`, seq, starts, ends)
+}
+
+translateOverlap <- function(c1s, c1e, c2s, c2e, as1, ae1, as2, ae2) {
+    .Call(`_RealReadSim_translateOverlap`, c1s, c1e, c2s, c2e, as1, ae1, as2, ae2)
+}
+
+mkChimeras <- function(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2) {
+    .Call(`_RealReadSim_mkChimeras`, starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2)
 }
 
 evalCoverage <- function(pos, width, length, minOverlap, minContigLength) {

@@ -17,16 +17,58 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// getCoverage
-std::vector<int> getCoverage(std::vector<int>& pos, std::vector<int>& width, int length);
-RcppExport SEXP _RealReadSim_getCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP) {
+// subSeqs
+std::vector<std::string> subSeqs(std::string seq, std::vector<int> starts, std::vector<int> ends);
+RcppExport SEXP _RealReadSim_subSeqs(SEXP seqSEXP, SEXP startsSEXP, SEXP endsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<int>& >::type pos(posSEXP);
-    Rcpp::traits::input_parameter< std::vector<int>& >::type width(widthSEXP);
-    Rcpp::traits::input_parameter< int >::type length(lengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(getCoverage(pos, width, length));
+    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type starts(startsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type ends(endsSEXP);
+    rcpp_result_gen = Rcpp::wrap(subSeqs(seq, starts, ends));
+    return rcpp_result_gen;
+END_RCPP
+}
+// translateOverlap
+std::vector<int> translateOverlap(int c1s, int c1e, int c2s, int c2e, int as1, int ae1, int as2, int ae2);
+RcppExport SEXP _RealReadSim_translateOverlap(SEXP c1sSEXP, SEXP c1eSEXP, SEXP c2sSEXP, SEXP c2eSEXP, SEXP as1SEXP, SEXP ae1SEXP, SEXP as2SEXP, SEXP ae2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type c1s(c1sSEXP);
+    Rcpp::traits::input_parameter< int >::type c1e(c1eSEXP);
+    Rcpp::traits::input_parameter< int >::type c2s(c2sSEXP);
+    Rcpp::traits::input_parameter< int >::type c2e(c2eSEXP);
+    Rcpp::traits::input_parameter< int >::type as1(as1SEXP);
+    Rcpp::traits::input_parameter< int >::type ae1(ae1SEXP);
+    Rcpp::traits::input_parameter< int >::type as2(as2SEXP);
+    Rcpp::traits::input_parameter< int >::type ae2(ae2SEXP);
+    rcpp_result_gen = Rcpp::wrap(translateOverlap(c1s, c1e, c2s, c2e, as1, ae1, as2, ae2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mkChimeras
+List mkChimeras(std::vector<int>& starts1, std::vector<int>& ends1, std::vector<std::vector<int> >& covs1, std::vector<int>& starts2, std::vector<int>& ends2, std::vector<std::vector<int> >& covs2, std::vector<int>& aStarts1, std::vector<int>& aEnds1, std::vector<int>& aStarts2, std::vector<int>& aEnds2, std::vector<std::string>& seqs1, std::vector<std::string>& seqs2, std::vector<std::string>& name1, std::vector<std::string>& name2);
+RcppExport SEXP _RealReadSim_mkChimeras(SEXP starts1SEXP, SEXP ends1SEXP, SEXP covs1SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP covs2SEXP, SEXP aStarts1SEXP, SEXP aEnds1SEXP, SEXP aStarts2SEXP, SEXP aEnds2SEXP, SEXP seqs1SEXP, SEXP seqs2SEXP, SEXP name1SEXP, SEXP name2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<int>& >::type starts1(starts1SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type ends1(ends1SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int> >& >::type covs1(covs1SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type starts2(starts2SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type ends2(ends2SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int> >& >::type covs2(covs2SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type aStarts1(aStarts1SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type aEnds1(aEnds1SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type aStarts2(aStarts2SEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type aEnds2(aEnds2SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type seqs1(seqs1SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type seqs2(seqs2SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type name1(name1SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type name2(name2SEXP);
+    rcpp_result_gen = Rcpp::wrap(mkChimeras(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -78,7 +120,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_RealReadSim_calcMinOverlap", (DL_FUNC) &_RealReadSim_calcMinOverlap, 2},
-    {"_RealReadSim_getCoverage", (DL_FUNC) &_RealReadSim_getCoverage, 3},
+    {"_RealReadSim_subSeqs", (DL_FUNC) &_RealReadSim_subSeqs, 3},
+    {"_RealReadSim_translateOverlap", (DL_FUNC) &_RealReadSim_translateOverlap, 8},
+    {"_RealReadSim_mkChimeras", (DL_FUNC) &_RealReadSim_mkChimeras, 14},
     {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 5},
     {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 5},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},

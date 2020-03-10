@@ -261,5 +261,22 @@ int calcMinOverlap(std::string seq,int meanWidth){
   std::cout << "minOverlap ist: " << minOverlap <<"\n";
   return minOverlap;
 }
+//[[Rcpp::export]]
+std::vector<std::string> subSeqs(std::string seq,std::vector<int> starts,std::vector<int> ends){
+  std::vector<std::string> res;
+  std::vector<int>::iterator st = starts.begin();
+  std::vector<int>::iterator en = ends.begin();
+  for(int i = 0;i < starts.size();i++){
+    if(*en <= seq.size()){
+      res.push_back(seq.substr(*st,*en-*st+1));
+    }
+    else{
+      res.push_back(seq.substr(*st,seq.size()-*st) + seq.substr(0,*en-seq.size()+1));
+    }
+    st++;
+    en++;
+  }
+  return res;
+}
 
 #endif

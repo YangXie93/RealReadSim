@@ -64,7 +64,9 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     sdCov = list()
     seqs = list()
     cov = list()
+    sequ = list()
     DS = unique(catalogue$dir)
+
     n = 1
     for(i in 1:length(DS)){
         partialCatalogue = subset(catalogue,dir == DS[i])
@@ -76,8 +78,10 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
                 print(paste(length(data$pos)," reads have been selected"))
                 contigs = RealReadSim::evalCoverage(data$pos, data$width, partialCatalogue$length[j],partialCatalogue$minOverlap[j],minContigLength)
                 if(length(contigs[[1]]) > 0){
+                    fst = readDNAStringSet(partialCatalogue$fasta[j])
                     starts[[n]] = contigs[[1]]
                     ends[[n]] = contigs[[2]]
+                    sequ[[n]] = subSeqs(toString(fst),starts[[n]],ends[[n]])
                     cov = append(cov,contigs[[3]])
                     mCov[[n]] = contigs[[4]]
                     sdCov[[n]] = contigs[[5]]
@@ -91,22 +95,21 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         }
         print(Sys.time() -starttime)#################################################################
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),sdCov = unlist(sdCov),seqName = unlist(seqs))
+    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),sdCov = unlist(sdCov),seqName = unlist(seqs),sequence = unlist(sequ))
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
 
-    #res = coAssembleRRSDS(temp)
+    res = coAssembleRRSDS(temp)
 
     if(humanReadable){
         #RealReadSim::makeHumanReadable(cov,res)
     }
     print(Sys.time() -starttime)#################################################################
-    return(temp)
+    return(res)
 }
 
-coAssemleRRSDS <- function(Contigs){
-
+coAssembleRRSDS <- function(contigs){
     RRSDS = paste0(Sys.getenv("HOME"),"/RealReadSimDS/")
 
     involved = unique(contigs$seqName)
@@ -121,10 +124,32 @@ coAssemleRRSDS <- function(Contigs){
 
     for(i in 1:length(table$name1)){
         same = readRDS(table$path[i])
-        conts = contigs[seqName == table$name1[i] || seqName == table$name2[i]]
+        same1 = same[table$name1[i]][[1]]
+        same2 = same[table$name2[i]][[1]]
+        conts1 = subset(contigs,seqName == table$name1[i])
+        conts2 = subset(contigs,seqName == table$name2[i])
+        res = list(conts1,conts2,same1,same2)
+        return(res)
+        print(conts1[,1:6])
+        print(conts2[,1:6])
+        for(j in 1:length(conts1$seqName)){
+            if(nchar(conts1[j,7]) == 0){
+                print(j)
+            }
+        }
+        for(j in 1:length(conts2$seqName)){
+            if(nchar(conts2[j,7]) == 0){
+                print(j)
+            }
+        }
+        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$sequnece,conts2$sequence,conts1$seqName,conts2$seqName)
+        print(2)
+        contigs = contigs[-(contigs$seqName == table$name1[i])]
+        contigs = contigs[-(contigs$seqName == table$name2[i])]
 
+        contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[6]]),end = c(contigs$end,newConts[[2]],newConts[[7]]),coverage = c(contigs$coverage,newConts[[3]],newConts[[8]]),seqName= c(contigs$seqName,newConts[[4]],newConts[[9]]))
     }
-
+    return(contigs)
 }
 
 

@@ -14,7 +14,7 @@ realReadSim(
   redraw = FALSE,
   repeatable = TRUE,
   seed = 0,
-  minContigLength = 10000
+  minContigLength = 500
 )
 }
 \arguments{
