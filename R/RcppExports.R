@@ -13,8 +13,12 @@ translateOverlap <- function(c1s, c1e, c2s, c2e, as1, ae1, as2, ae2) {
     .Call(`_RealReadSim_translateOverlap`, c1s, c1e, c2s, c2e, as1, ae1, as2, ae2)
 }
 
-mkChimeras <- function(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2) {
-    .Call(`_RealReadSim_mkChimeras`, starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2)
+hasOverlap <- function(c1s, c1e, c2s, c2e, a1s, a1e, a2s, a2e) {
+    .Call(`_RealReadSim_hasOverlap`, c1s, c1e, c2s, c2e, a1s, a1e, a2s, a2e)
+}
+
+mkChimeras <- function(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, lam1, lam2) {
+    .Call(`_RealReadSim_mkChimeras`, starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, lam1, lam2)
 }
 
 evalCoverage <- function(pos, width, length, minOverlap, minContigLength) {

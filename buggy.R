@@ -41,24 +41,41 @@
  # nm1 = c("a","a")
  # nm2 = c("b","b","b")
 
- # s1 = c(7,16,27)
- # e1 = c(13,25,33)
- # s2 = c(4,12)
- # e2 = c(11,24)
- # a1s = c(5,20)
- # a1e = c(17,28)
- # a2s = c(1,15)
- # a2e = c(12,23)
- # cov1 = list(rep(10,7),rep(1,9),rep(13,7))
- # cov2 = list(rep(2,8),rep(12,13))
- # sq1 = c(paste0(rep("A",7),collapse = ""),paste0(rep("A",9),collapse = ""),paste0(rep("A",7),collapse = ""))
- # sq2 = c(paste0(rep("T",8),collapse = ""),paste0(rep("T",13),collapse = ""))
-
+#  s1 = c(7,16,27)
+#  e1 = c(13,24,33)
+#  s2 = c(4,13)
+#  e2 = c(11,25)
+#  a1s = c(5,20)
+#  a1e = c(17,28)
+#  a2s = c(1,16)
+#  a2e = c(13,24)
+#  cov1 = list(rep(10,7),rep(1,9),rep(13,7))
+#  cov2 = list(rep(2,8),rep(12,13))
+#  sq1 = c(paste0(rep("A",7),collapse = ""),paste0(rep("A",9),collapse = ""),paste0(rep("A",7),collapse = ""))
+#  sq2 = c(paste0(rep("T",8),collapse = ""),paste0(rep("T",13),collapse = ""))
+# nm1 = c("a","a","a")
+# nm2 = c("b","b")
+#
 # mkChimeras(s1,e1,cov1,s2,e2,cov2,a1s,a1e,a2s,a2e,sq1,sq2,nm1,nm2)
 
 library(RealReadSim)
 x = realReadSim("/home/yang/uni/BA-Projekt-Data/testBinning.txt",10)
-y = mkChimeras(x[[1]]$start,x[[1]]$end,x[[1]]$coverage,x[[2]]$start,x[[2]]$end,x[[2]]$coverage,start(x[[3]]),end(x[[3]]),start(x[[4]]),end(x[[4]]),x[[1]]$sequence,x[[2]]$sequence,x[[1]]$seqName,x[[2]]$seqName)
-for(i in 1:length(y[[4]])){
-        print(length(y[[4]][[i]]))
-}
+# n = 0
+# for(i in 1:length(x$start)){
+#         if(x$end[i]-x$start[i]+1 != length(x$coverage[[i]])){
+#                 n = n +1
+#                 print(paste("1",i,x$end[i]-x$start[i]+1,length(x$coverage[[i]])))
+#         }
+#         if(length(x$coverage[[i]]) != nchar(x$seq[i])){
+#                 n = n +1
+#                 print(paste("2",i,length(x$coverage[[i]]),nchar(x$seq[i])))
+#         }
+#         if(nchar(x$seq[i]) != x$end[i]-x$start[i]+1){
+#                 n = n +1
+#                 print(paste("3",i,nchar(x$seq[i]),x$end[i]-x$start[i]+1))
+#         }
+# }
+#
+# for(i in 1:length(x$start)){
+#         print(x$coverage[[i]][length(x$coverage[[i]])])
+# }

@@ -110,17 +110,16 @@ public:
         std::vector<int> starts;
         std::vector<int> ends;
         std::vector<double> mCovs;
-        std::vector<double> covSD;
         Rcpp::List covs;
         double mean;
 
         int* covIt = cov;
         int i = 0;
+        int en = 1;
         int* it;
 
         while(*covIt > 0 && i < length){
           covIt++;
-          i++;
         }
 
         if(covIt == cov+length-1){
@@ -128,7 +127,6 @@ public:
           ends.push_back(length);
           mean = meanCovOnRange(1,length);
           mCovs.push_back(mean);
-          covSD.push_back(SDCovOnRange(1,length,mean));
           covs.push_back(std::vector<int> (cov,cov+length-1));
         }
         else{
@@ -138,55 +136,51 @@ public:
 
           if(covIt == cov){
             it = cov;
-            covIt = cov+length-1;
+            covIt = cov+length;
           }
           else{
+            covIt--;
             it = covIt+1;
           }
           i = it-cov;
+          en = it-cov+1;
 
           while(it != covIt){
+
+            if(it >= cov+length){
+              it = cov;
+              i = 0;
+            }
+
             if(*(it) > 0 && switching){
               n = i;
               switching = false;
             }
             if(*(it) == 0 && !switching){
+
               switching = true;
               if(i -n >= minContigLength){
                 starts.push_back(n+1);
-                ends.push_back(i+1);
-                mean = meanCovOnRange(n,i);
+                ends.push_back(i);
+                mean = meanCovOnRange(n,i-1);
                 mCovs.push_back(mean);
-                covSD.push_back(SDCovOnRange(n,i,mean));
                 covs.push_back(std::vector<int> (cov+n,cov+i));
               }
             }
 
             it++;
             i++;
-            if(it >= cov+length){
-              it = cov;
-              i = 0;
-            }
+            en++;
           }
 
         }
-        Rcpp::List res = Rcpp::List::create(starts, ends, covs, mCovs, covSD);
+        Rcpp::List res = Rcpp::List::create(starts, ends, covs, mCovs);
         return res;
     }
 
 
     double meanCovOnRange(int start,int end){
       return std::accumulate(cov+start,cov+end,0)/double (end-start);
-    }
-
-
-    double SDCovOnRange(int start,int end,double mean){
-      std::vector<double> tmp;
-      for(int i = start;i <= end;i++){
-        tmp.push_back(std::pow((*(cov+i)-mean),2) );
-      }
-      return std::sqrt(std::accumulate(tmp.begin(),tmp.end(),0)/(end-start));
     }
 
 
@@ -271,12 +265,13 @@ std::vector<std::string> subSeqs(std::string seq,std::vector<int> starts,std::ve
       res.push_back(seq.substr(*st,*en-*st+1));
     }
     else{
-      res.push_back(seq.substr(*st,seq.size()-*st) + seq.substr(0,*en-seq.size()+1));
+      res.push_back(seq.substr(*st,seq.size()-1) + seq.substr(0,*en-seq.size()));
     }
     st++;
     en++;
   }
   return res;
 }
+
 
 #endif

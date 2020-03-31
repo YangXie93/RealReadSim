@@ -84,7 +84,6 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
                     sequ[[n]] = subSeqs(toString(fst),starts[[n]],ends[[n]])
                     cov = append(cov,contigs[[3]])
                     mCov[[n]] = contigs[[4]]
-                    sdCov[[n]] = contigs[[5]]
                     seqs[[n]] = rep(partialCatalogue$name[j],length(contigs[[1]]))
                     n = n+1
                 }
@@ -95,16 +94,19 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         }
         print(Sys.time() -starttime)#################################################################
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),sdCov = unlist(sdCov),seqName = unlist(seqs),sequence = unlist(sequ))
+    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),seqName = unlist(seqs),seq = unlist(sequ))
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
-
+    coasstime = Sys.time()
     res = coAssembleRRSDS(temp)
-
+    res$length = (res$end-res$start)+1
+    res = subset(res,length >= minContigLength)
+    coasstime = Sys.time() -coasstime
     if(humanReadable){
         #RealReadSim::makeHumanReadable(cov,res)
     }
+    print(coasstime)
     print(Sys.time() -starttime)#################################################################
     return(res)
 }
@@ -128,26 +130,11 @@ coAssembleRRSDS <- function(contigs){
         same2 = same[table$name2[i]][[1]]
         conts1 = subset(contigs,seqName == table$name1[i])
         conts2 = subset(contigs,seqName == table$name2[i])
-        res = list(conts1,conts2,same1,same2)
-        return(res)
-        print(conts1[,1:6])
-        print(conts2[,1:6])
-        for(j in 1:length(conts1$seqName)){
-            if(nchar(conts1[j,7]) == 0){
-                print(j)
-            }
-        }
-        for(j in 1:length(conts2$seqName)){
-            if(nchar(conts2[j,7]) == 0){
-                print(j)
-            }
-        }
-        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$sequnece,conts2$sequence,conts1$seqName,conts2$seqName)
-        print(2)
-        contigs = contigs[-(contigs$seqName == table$name1[i])]
-        contigs = contigs[-(contigs$seqName == table$name2[i])]
 
-        contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[6]]),end = c(contigs$end,newConts[[2]],newConts[[7]]),coverage = c(contigs$coverage,newConts[[3]],newConts[[8]]),seqName= c(contigs$seqName,newConts[[4]],newConts[[9]]))
+        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$seq,conts2$seq,conts1$seqName,conts2$seqName,conts1$meanCov,conts2$meanCov)
+
+        contigs = subset(contigs,seqName != table$name1[i] && seqName != table$name2[i])
+        contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[6]]),end = c(contigs$end,newConts[[2]],newConts[[7]]),coverage = c(contigs$coverage,newConts[[4]],newConts[[9]]),seqName= c(contigs$seqName,newConts[[5]],newConts[[10]]),seq = c(contigs$seq,newConts[[3]],newConts[[8]]))
     }
     return(contigs)
 }
