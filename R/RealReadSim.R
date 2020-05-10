@@ -24,6 +24,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
 
     covAt = 1
+    nrOfSamples = length(coverage[1,])
 
     params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)  #(?) mapqFilter
     seqNames = c()
@@ -65,18 +66,21 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     seqs = list()
     cov = list()
     sequ = list()
+    mCovVecs = list()
     DS = unique(catalogue$dir)
 
     n = 1
     for(i in 1:length(DS)){
+
         partialCatalogue = subset(catalogue,dir == DS[i])
         fullData = readRDS(partialCatalogue$data[1])
-        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw)
+        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt,],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw)
         for(j in 1:length(partialCatalogue$name)){
+
             data = subset(fullData,seq == partialCatalogue$name[j])
             if(length(data$pos) > 0){
-                print(paste(length(data$pos)," reads have been selected"))
-                contigs = RealReadSim::evalCoverage(data$pos, data$width, partialCatalogue$length[j],partialCatalogue$minOverlap[j],minContigLength)
+                print(paste(length(data$pos)," reads have been selected"))###########################################
+                contigs = RealReadSim::evalCoverage(data$pos, data$width,data$sampleNr, partialCatalogue$length[j],partialCatalogue$minOverlap[j],minContigLength,nrOfSamples)
                 if(length(contigs[[1]]) > 0){
                     fst = readDNAStringSet(partialCatalogue$fasta[j])
                     starts[[n]] = contigs[[1]]
@@ -85,28 +89,31 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
                     cov = append(cov,contigs[[3]])
                     mCov[[n]] = contigs[[4]]
                     seqs[[n]] = rep(partialCatalogue$name[j],length(contigs[[1]]))
+                    mCovVecs = append(mCovVecs,contigs[[5]])
                     n = n+1
                 }
             }
+
         }
         if(covAt < length(coverage)){
             covAt = covAt +1
         }
         print(Sys.time() -starttime)#################################################################
+
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),seqName = unlist(seqs),seq = unlist(sequ))
+    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),seqName = unlist(seqs),seq = unlist(sequ),coverageVectors = mCovVecs)
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
-    coasstime = Sys.time()
+    coasstime = Sys.time()###################################
     res = coAssembleRRSDS(temp)
     res$length = (res$end-res$start)+1
     res = subset(res,length >= minContigLength)
-    coasstime = Sys.time() -coasstime
+    coasstime = Sys.time() -coasstime#############################
     if(humanReadable){
         #RealReadSim::makeHumanReadable(cov,res)
     }
-    print(coasstime)
+    print(coasstime)#################################################
     print(Sys.time() -starttime)#################################################################
     return(res)
 }
@@ -155,21 +162,27 @@ makeHumanReadable <- function(cov,res){
 }
 
 
-randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw){
+randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw,sampleNr = 1){
 
-    numberOfReads = as.integer((sum(seqLength) *coverage)/meanWidht)
-    if(repeatable){
-        set.seed(seed)
-    }
-    if(numberOfReads > length(data$pos) && !redraw){
-        whch = 1:length(data$pos)
-    }
-    else{
-        whch = sample(1:length(data$pos),numberOfReads,replace = redraw)
+    whch = c()
+    sampleNrs = c()
+    for(i in 1:sampleNr){
+        numberOfReads = as.integer((sum(seqLength) *coverage[i])/meanWidht)
+        if(repeatable){
+            set.seed(seed)
+        }
+        if(numberOfReads > length(data$pos) && !redraw){
+            whch =c(whch,1:length(data$pos))
+        }
+        else{
+            whch = sample(1:length(data$pos),numberOfReads,replace = redraw)
+        }
+        sampleNrs = c(sampleNrs,rep(i,length(whch)))
     }
 
 
     res = data[whch,]
+    res["sampleNr"] = sampleNrs
     return(res)
 }
 

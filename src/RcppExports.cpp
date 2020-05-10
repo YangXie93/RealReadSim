@@ -93,17 +93,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // evalCoverage
-List evalCoverage(std::vector<int>& pos, std::vector<int>& width, int length, int minOverlap, int minContigLength);
-RcppExport SEXP _RealReadSim_evalCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP lengthSEXP, SEXP minOverlapSEXP, SEXP minContigLengthSEXP) {
+List evalCoverage(std::vector<int>& pos, std::vector<int>& width, std::vector<int>& sampleID, int length, int minOverlap, int minContigLength, int nrOfSamples);
+RcppExport SEXP _RealReadSim_evalCoverage(SEXP posSEXP, SEXP widthSEXP, SEXP sampleIDSEXP, SEXP lengthSEXP, SEXP minOverlapSEXP, SEXP minContigLengthSEXP, SEXP nrOfSamplesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<int>& >::type pos(posSEXP);
     Rcpp::traits::input_parameter< std::vector<int>& >::type width(widthSEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type sampleID(sampleIDSEXP);
     Rcpp::traits::input_parameter< int >::type length(lengthSEXP);
     Rcpp::traits::input_parameter< int >::type minOverlap(minOverlapSEXP);
     Rcpp::traits::input_parameter< int >::type minContigLength(minContigLengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(evalCoverage(pos, width, length, minOverlap, minContigLength));
+    Rcpp::traits::input_parameter< int >::type nrOfSamples(nrOfSamplesSEXP);
+    rcpp_result_gen = Rcpp::wrap(evalCoverage(pos, width, sampleID, length, minOverlap, minContigLength, nrOfSamples));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -144,7 +146,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RealReadSim_translateOverlap", (DL_FUNC) &_RealReadSim_translateOverlap, 8},
     {"_RealReadSim_hasOverlap", (DL_FUNC) &_RealReadSim_hasOverlap, 8},
     {"_RealReadSim_mkChimeras", (DL_FUNC) &_RealReadSim_mkChimeras, 16},
-    {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 5},
+    {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 7},
     {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 5},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
     {NULL, NULL, 0}

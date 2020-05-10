@@ -185,10 +185,10 @@ crossMapRRSDS <- function(){
         #------------------------------ mapping the reads onto the other seq with bowtie2 -----------------------------------------------------------------
 
         system(paste0("bowtie2-build ",to$fasta," ",to$dir,"/index"),ignore.stdout = TRUE,ignore.stderr = TRUE)
-        system(paste0("bowtie2 --no-unal -x ",to$dir,"/index ",readInput," -S ",from$dir,"/out.sam"),ignore.stdout = TRUE,ignore.stderr = TRUE)
+        system(paste0("bowtie2 --no-unal -x ",to$dir,"/index ",readInput," -S ",from$dir,"/out.sam"))#,ignore.stdout = TRUE,ignore.stderr = TRUE)
+
         system(paste0("samtools view -bS ",from$dir,"/out.sam > ",from$dir,"/out.bam"))
         #------------------------------- readiying and saving the read data -------------------------------------------
-
         mapped = scanBam(paste0(from$dir,"/out.bam"),param = params)
 
         map = data.table(start1 = mapped[[1]]$pos,end1 = mapped[[1]]$pos + mapped[[1]]$qwidth -1,start2 = as.integer(gsub(".*_","",mapped[[1]]$qname)),end2 =as.integer(gsub(".*_","",mapped[[1]]$qname)) + mapped[[1]]$qwidth -1,key = "start1" )

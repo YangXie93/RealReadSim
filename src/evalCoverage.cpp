@@ -6,8 +6,8 @@ using namespace Rcpp;
 //[[Rcpp::plugins(cpp11)]]
 //[[Rcpp::export]]
 
-List evalCoverage(std::vector<int>& pos,std::vector<int>& width,int length,int minOverlap,int minContigLength){
+List evalCoverage(std::vector<int>& pos,std::vector<int>& width,std::vector<int>& sampleID,int length,int minOverlap,int minContigLength,int nrOfSamples){
 
-    SeqRep rep = SeqRep(length,minOverlap,&pos,&width);    //erstellen des SeqRep Objektes
+    SeqRep rep = SeqRep(length,minOverlap,nrOfSamples,&pos,&width,&sampleID);    //erstellen des SeqRep Objektes
     return rep.assembleTestContigs(minContigLength);
 }

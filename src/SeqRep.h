@@ -21,19 +21,28 @@
 class SeqRep{
 public:
     //constructor
-    SeqRep(int length,int minOverlap,std::vector<int> *pos,std::vector<int> *width){
+    SeqRep(int length,int minOverlap,int nrOfSamples,std::vector<int> *pos,std::vector<int> *width,std::vector<int> *sample){
 
+        this->nrOfSamples = nrOfSamples;
         this->length = length;
         this->minOverlap = minOverlap;
         nr = (int) pos->size();
-        readStarts = new int*[nr];
-        readEnds = new int*[nr];
+        readStarts = new int[nr];
+        readEnds = new int[nr];
+        sampleNr = new int[nr];
         cov = new int[length];
+        indivCovs = new int*[nrOfSamples];
+
+        for(int i = 0; i < nrOfSamples;i++){
+            *(indivCovs+i) = new int[length];
+            std::fill(*(indivCovs+i),*(indivCovs+i)+length-1,0);
+        }
 
         std::fill(cov,cov+length-1,0);
 
         std::vector<int>::iterator posIt = pos->begin();
         std::vector<int>::iterator widthIt = width->begin();
+        std::vector<int>::iterator sampleIt = sample->begin();
         for(int i = 0;i < nr;i++){
 
           int* start = cov+(*posIt);
@@ -42,9 +51,11 @@ public:
             end = end-length;
           }
 
+          addToCov(*(indivCovs+*(sampleIt))+(*posIt),*(indivCovs+*(sampleIt))+(*posIt+*widthIt-1),1);
           addToCov(start,end,1);
-          *(readStarts+i) = start;
-          *(readEnds+i) = end;
+          *(readStarts+i) = (*posIt);
+          *(readEnds+i) = (*posIt)+(*widthIt)-1;
+          *(sampleNr+i) = *sampleIt;
           posIt++;
           widthIt++;
         }
@@ -56,6 +67,11 @@ public:
         delete[] readStarts;
         delete[] readEnds;
         delete[] cov;
+        delete[] sampleNr;
+        for(int i = 0;i < nrOfSamples;i++){
+            delete[] *(indivCovs+i);
+        }
+        delete[] indivCovs;
     }
 
 
@@ -68,9 +84,9 @@ public:
     void evalOverlap(){    //Das Ergebnis aus evalCov() wird hier eingegeben
 
       int count = 0;
-      int* start;
-      int* end;
-      int* tmp;
+      int start;
+      int end;
+      int tmp;
       int best;
       int sortedOut = 0;
 
@@ -79,7 +95,7 @@ public:
           end = *(readEnds+i);
           tmp = start;
           while(start != end+1 && tmp != end+1){
-            if(*tmp > 1){
+            if(*(cov+tmp) > 1){
               count++;
             }
             else{
@@ -90,12 +106,13 @@ public:
             }
             start++;
             tmp++;
-            if(tmp >= cov+length){
-              tmp = cov;
+            if(tmp >= length){
+              tmp = 0;
             }
           }
           if(best >= minOverlap){
-            addToCov(*(readStarts+i),end,-1);
+            addToCov(cov+*(readStarts+i),cov+end,-1);
+            addToCov(*(indivCovs+*(sampleNr+i))+*(readStarts+i),*(indivCovs+*(sampleNr+i))+end,-1);
             sortedOut++;
           }
           count = 0;
@@ -110,8 +127,9 @@ public:
         std::vector<int> starts;
         std::vector<int> ends;
         std::vector<double> mCovs;
+        Rcpp::List mCovVecs;
         Rcpp::List covs;
-        double mean;
+        std::vector<double> meanVec;
 
         int* covIt = cov;
         int i = 0;
@@ -125,8 +143,9 @@ public:
         if(covIt == cov+length-1){
           starts.push_back(1);
           ends.push_back(length);
-          mean = meanCovOnRange(1,length);
-          mCovs.push_back(mean);
+          meanVec = meanCovOnRange(0,length-1);
+          mCovVecs.push_back(meanVec);
+          mCovs.push_back(compMeanCovOnRange(0,length-1));
           covs.push_back(std::vector<int> (cov,cov+length-1));
         }
         else{
@@ -162,8 +181,9 @@ public:
               if(i -n >= minContigLength){
                 starts.push_back(n+1);
                 ends.push_back(i);
-                mean = meanCovOnRange(n,i-1);
-                mCovs.push_back(mean);
+                meanVec = meanCovOnRange(n,i-1);
+                mCovVecs.push_back(meanVec);
+                mCovs.push_back(compMeanCovOnRange(n,i-1));
                 covs.push_back(std::vector<int> (cov+n,cov+i));
               }
             }
@@ -174,13 +194,21 @@ public:
           }
 
         }
-        Rcpp::List res = Rcpp::List::create(starts, ends, covs, mCovs);
+        Rcpp::List res = Rcpp::List::create(starts, ends, covs, mCovs,mCovVecs);
         return res;
     }
 
+    double compMeanCovOnRange(int start,int end){
+        return std::accumulate(cov+start,cov+end,0)/double (end-start);
+    }
 
-    double meanCovOnRange(int start,int end){
-      return std::accumulate(cov+start,cov+end,0)/double (end-start);
+    std::vector<double> meanCovOnRange(int start,int end){
+        std::vector<double> res;
+        for(int i = 0;i < nrOfSamples;i++){
+            res.push_back(std::accumulate(*(indivCovs+i)+start,*(indivCovs+i)+end,0)/double (end-start));
+        }
+
+        return res;
     }
 
 
@@ -212,14 +240,31 @@ public:
     }
 
 
+    void addToIndivCov(int* start,int* end,int val,int sample){
+        int* tmp = start;
+        int x = 1;
+        while(start != end+1 && tmp != end+1){
+            (*tmp) += val;
+            tmp++;
+            start++;
+            x++;
+            if(tmp >= *(indivCovs+sample)+length){
+                tmp = *(indivCovs+sample);
+            }
+        }
+    }
+
 private:
 
+    int nrOfSamples;
     int minOverlap;
     int length;
     int nr;
     int* cov;
-    int** readStarts;
-    int** readEnds;
+    int** indivCovs;
+    int* readStarts;
+    int* readEnds;
+    int* sampleNr;
 };
 
 //[[Rcpp::export]]

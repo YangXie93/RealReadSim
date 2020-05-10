@@ -22,6 +22,8 @@ std::vector<std::string> rNm1;
 std::vector<std::string> rNm2;
 std::list<std::vector<int> > rCv1;
 std::list<std::vector<int> > rCv2;
+std::list<std::vector<int> > rCvVec1;
+std::list<std::vector<int> > rCvVec2;
 
 bool save1;
 bool save2;
@@ -55,23 +57,8 @@ int noPos(int num)
 //[[Rcpp::export]]
 std::vector<int> translateOverlap(int c1s,int c1e,int c2s,int c2e,int as1,int ae1,int as2,int ae2)
 {
-
-    // Rcout << 0+noNeg(as1-c1s) << " " << noPos((as1-c1s)) << " " << noPos((as2-c2s)) << std::endl;
-    // Rcout << (ae1-c1s-noNeg(c1e-ae1)) << " " << noPos((c1e-ae1)) << " " << noPos((c2e-ae2)) << std::endl;
-    // Rcout << (0+noNeg(as2-c2s)) << " " << noPos(as2-c2s) << " " << noPos(as1-c1s) << std::endl;
-    // Rcout << (ae2-c2s-noNeg(ae2-c2e)) << " " << noPos(c2e-ae2) << " " << noPos(c1e-ae2) << std::endl;
     return {(0+noNeg(as1-c1s))+noNeg(noPos((as1-c1s))-noPos((as2-c2s))),(ae1-c1s-noNeg(ae1-c1e))-noNeg(noPos((c1e-ae1))-noPos((c2e-ae2))),(0+noNeg(as2-c2s))+noNeg(noPos(as2-c2s)-noPos(as1-c1s)),(ae2-c2s-noNeg(ae2-c2e))-noNeg(noPos(c2e-ae2)-noPos(c1e-ae1))};;
 }
-
-// double calcPoisProb(int x,double lambda)
-// {
-//     long int tmp = 1;
-//     for(int n = 1; n <= x;n++)
-//     {
-//         tmp *= n;
-//     }
-//     return (double)(std::pow(EulerConstant,-lambda)*std::pow(lambda,x)/(double)tmp);
-// }
 
 
 void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2){
@@ -288,31 +275,10 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
     *tsq1 = s;
 }
 
-//
-// double SD(int* start,int* end,double mean){
-//     std::vector<double> tmp;
-//     for(int* i = start;i <= end;i++){
-//         tmp.push_back(((*i)-mean)*((*i)-mean) );
-//     }
-//     double sum = 0;
-//     for(int i = 0;i < tmp.size();i++){
-//         sum += tmp[i];
-//     }
-//     return std::sqrt(sum/(double)(end-start));
-// }
 
-// double tTest(double mean1,double sd1,int n,double mean2,double sd2,int m){
-//
-//     double t_test = (mean1 - mean2) / sqrt(((sd1*sd1) / n) + ((sd2*sd2) / m));
-//     return t_test;
-// }
-//
-
-
-void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string name2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2,int lambda1,int lambda2)
+void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string name2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2,std::vector<int>* tcv1,std::vector<int>* tcv2)
 {
     std::vector<int> site = translateOverlap(*ts1,*te1,*ts2,*te2,as1,ae1,as2,ae2);
-    // std::vector<int> covSum;
 
     std::vector<int>::iterator s1 = next((*tcov1).begin(),site[0]);
     std::vector<int>::iterator s2 = next((*tcov2).begin(),site[2]);
@@ -321,9 +287,7 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
     double prob1 = 0;
     double prob2 = 0;
     int n;
-    // Rcout << "site: " << site[0] << " " << site[1] << " " << site[2] << " " << site[3]  << " " << siteLength<< std::endl;
     for(n = 0; n < siteLength;n++){
-        // covSum.push_back(*(s1+n)+*(s2+n));
         prob1 += *(s1+n)/(double)(*(s1+n)+*(s2+n));
         prob2 += *(s2+n)/(double)(*(s1+n)+*(s2+n));
     }
@@ -331,27 +295,16 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
     prob1 /= n+1;
     prob2 /= n+1;
 
-    // double probArr1[siteLength];
-    // double probArr2[siteLength];
-    //
-    // for(int n = 0;n < covSum.size();n++)
-    // {
-    //     *(probArr1+n) = calcPoisProb(covSum[n],lambda1);
-    //     *(probArr2+n) = calcPoisProb(covSum[n],lambda2);
-    // }
-// Rcout << std::endl;
-//     double prob1 = std::accumulate(probArr1,(probArr1+siteLength-1),0.0)/(double)siteLength;
-//     double prob2 = std::accumulate(probArr2,(probArr2+siteLength-1),0.0)/(double)siteLength;
-
-    Rcout << prob1 << " " << prob2 << std::endl;
+    Rcout << prob1 << " " << prob2 << std::endl;//################################################
 
     if(prob1 > prob2)
     {
         if(prob1 >= minProb)
         {
-            Rcout << prob1 << std::endl;
+            Rcout << prob1 << std::endl;//################################################
             swtch = true;
             fuseCovs(siteLength,site[0],site[2],name2,prob2,ts1,te1,ts2,te2,tsq1,tsq2,tnm1,tnm2,tcov1,tcov2);
+            *tcv1 = fuseCovVecs(*tcv1,*tcv2);
         }
 
     }
@@ -359,9 +312,10 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
     {
         if(prob2 >= minProb)
         {
-            Rcout << prob2 << std::endl;
+            Rcout << prob2 << std::endl;//################################################
             swtch = false;
             fuseCovs(siteLength,site[2],site[0],name1,prob1,ts2,te2,ts1,te1,tsq2,tsq1,tnm2,tnm1,tcov2,tcov1);
+            *tcv2 = fuseCovVecs(*tcv1,*tcv2); 
         }
 
     }
@@ -439,8 +393,20 @@ void fuseSameGenCont(std::vector<int>::iterator s,std::vector<int>::iterator e,s
     *seq = tmpS;
 }
 
+std::vector<int> fuseCovVecs(std::vector<int>& covVec1; std::vector<int>& covVec2){
+    std::vector<int> res;
+    std::vector<int>::iterator j = covVec2.begin();
+
+    for(std::vector<int>::iterator i = covVec1.begin();i != covVec1.end();i++){
+        res.push_back(((*i)+(*j))/2);
+        j++;
+    }
+
+    return res;
+}
+
 //[[Rcpp::export]]
-List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std::vector<int> >& covs1,std::vector<int>& starts2,std::vector<int>& ends2,std::list<std::vector<int> >& covs2,std::vector<int>& aStarts1,std::vector<int>& aEnds1,std::vector<int>& aStarts2,std::vector<int>& aEnds2,std::list<std::string>& seqs1,std::list<std::string>& seqs2,std::vector<std::string>& name1,std::vector<std::string>& name2,std::vector<int>& lam1,std::vector<int>& lam2)
+List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std::vector<int> >& covs1,std::vector<int>& starts2,std::vector<int>& ends2,std::list<std::vector<int> >& covs2,std::vector<int>& aStarts1,std::vector<int>& aEnds1,std::vector<int>& aStarts2,std::vector<int>& aEnds2,std::list<std::string>& seqs1,std::list<std::string>& seqs2,std::vector<std::string>& name1,std::vector<std::string>& name2,std::list<std::vector<int> > covVecs1,std::list<std::vector<int> > covVecs2)
 {
 
     std::vector<int>::iterator s1 = starts1.begin();
@@ -457,8 +423,8 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
     std::vector<std::string>::iterator nm2 = name2.begin();
     std::list<std::vector<int> >::iterator c1 = covs1.begin();
     std::list<std::vector<int> >::iterator c2 = covs2.begin();
-    std::vector<int>::iterator l1 = lam1.begin();
-    std::vector<int>::iterator l2 = lam2.begin();
+    std::list<std::vector<int> >::iterator cV1 = covVecs1.begin();
+    std::list<std::vector<int> >::iterator cV2 = covVecs2.begin();
 
     int tmpS1 = *(starts1.begin());
     int tmpE1 = *(ends1.begin());
@@ -470,6 +436,8 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
     std::string tmpNm2 = *(name2.begin());
     std::vector<int> tmpC1 = *(covs1.begin());
     std::vector<int> tmpC2 = *(covs2.begin());
+    std::vector<int> tmpCV1 = *(covVecs1.begin());
+    std::vector<int> tmpCV2 = *(covVecs2.begin());
 
     int* ts1 = &tmpS1;
     int* te1 = &tmpE1;
@@ -481,6 +449,8 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
     std::string* tnm2 = &tmpNm2;
     std::vector<int>* tcov1 = &tmpC1;
     std::vector<int>* tcov2 = &tmpC2;
+    std::vector<int>* tcv1 = &tmpCV1;
+    std::vector<int>* tcv2 = &tmpCV2;
 
     int lastAs1 = 0;
     int lastAe1 = 0;
@@ -500,7 +470,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
 
 
         if(hasOverlap(*ts1,*te1,*ts2,*te2,*as1,*ae1,*as2,*ae2)){
-            fuseContigs(*as1,*ae1,*as2,*ae2,*nm1,*nm2,ts1,te1,ts2,te2,tsq1,tsq2,tnm1,tnm2,tcov1,tcov2,*l1,*l2);
+            fuseContigs(*as1,*ae1,*as2,*ae2,*nm1,*nm2,ts1,te1,ts2,te2,tsq1,tsq2,tnm1,tnm2,tcov1,tcov2);
         }
 
 
@@ -558,7 +528,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
             sq1++;
             nm1++;
             c1++;
-            l1++;
+            cV1++;
             if(s1 != starts1.end()){
                 tmpS1 = *s1;
                 tmpE1 = *e1;
@@ -588,7 +558,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
             sq2++;
             nm2++;
             c2++;
-            l2++;
+            cV2++;
             if(s2 != starts2.end()){
                 tmpS2 = *s2;
                 tmpE2 = *e2;
@@ -640,6 +610,8 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
             c2++;
         }
     }
+
+
     while(distance(s1, starts1.end()) > 0){
         if(rE1.size() > 0 && hasSameGenOverlap(rE1.back(),*s1,lastAs1,lastAe1)){
             fuseSameGenCont(prev(rS1.end()),prev(rE1.end()),prev(rCv1.end()),prev(rSq1.end()),*s1,*e1,*c1,*sq1);
@@ -675,7 +647,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
         nm2++;
         c2++;
     }
-    return List::create(rS1,rE1,rSq1,rCv1,rNm1,rS2,rE2,rSq2,rCv2,rNm2);
+    return List::create(rS1,rS2,rE1,rE2,rSq2,rSq1,rCv1,rCv2,rNm1,rNm2,rCvVec1,rCvVec2);
 }
 
 

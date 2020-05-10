@@ -21,8 +21,8 @@ mkChimeras <- function(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, a
     .Call(`_RealReadSim_mkChimeras`, starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, lam1, lam2)
 }
 
-evalCoverage <- function(pos, width, length, minOverlap, minContigLength) {
-    .Call(`_RealReadSim_evalCoverage`, pos, width, length, minOverlap, minContigLength)
+evalCoverage <- function(pos, width, sampleID, length, minOverlap, minContigLength, nrOfSamples) {
+    .Call(`_RealReadSim_evalCoverage`, pos, width, sampleID, length, minOverlap, minContigLength, nrOfSamples)
 }
 
 getIdenticalSeqs <- function(starts1, ends1, starts2, ends2, minL = 0L) {
