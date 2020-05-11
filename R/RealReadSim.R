@@ -61,12 +61,11 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
 
     starts = list()
     ends = list()
-    mCov = list()
+    readsPerSample = list()
     sdCov = list()
     seqs = list()
     cov = list()
     sequ = list()
-    mCovVecs = list()
     DS = unique(catalogue$dir)
 
     n = 1
@@ -74,7 +73,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
 
         partialCatalogue = subset(catalogue,dir == DS[i])
         fullData = readRDS(partialCatalogue$data[1])
-        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt,],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw)
+        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt,],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw,nrOfSamples)
         for(j in 1:length(partialCatalogue$name)){
 
             data = subset(fullData,seq == partialCatalogue$name[j])
@@ -87,9 +86,8 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
                     ends[[n]] = contigs[[2]]
                     sequ[[n]] = subSeqs(toString(fst),starts[[n]],ends[[n]])
                     cov = append(cov,contigs[[3]])
-                    mCov[[n]] = contigs[[4]]
+                    readsPerSample = append(readsPerSample, contigs[[4]])
                     seqs[[n]] = rep(partialCatalogue$name[j],length(contigs[[1]]))
-                    mCovVecs = append(mCovVecs,contigs[[5]])
                     n = n+1
                 }
             }
@@ -101,18 +99,22 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         print(Sys.time() -starttime)#################################################################
 
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,meanCov = unlist(mCov),seqName = unlist(seqs),seq = unlist(sequ),coverageVectors = mCovVecs)
+    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,seqName = unlist(seqs),seq = unlist(sequ),rps = readsPerSample)
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
     coasstime = Sys.time()###################################
+
     res = coAssembleRRSDS(temp)
     res$length = (res$end-res$start)+1
     res = subset(res,length >= minContigLength)
+    res$covVec = calcCovVec(res$rps,res$length)
     coasstime = Sys.time() -coasstime#############################
+
     if(humanReadable){
         #RealReadSim::makeHumanReadable(cov,res)
     }
+
     print(coasstime)#################################################
     print(Sys.time() -starttime)#################################################################
     return(res)
@@ -138,10 +140,10 @@ coAssembleRRSDS <- function(contigs){
         conts1 = subset(contigs,seqName == table$name1[i])
         conts2 = subset(contigs,seqName == table$name2[i])
 
-        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$seq,conts2$seq,conts1$seqName,conts2$seqName,conts1$meanCov,conts2$meanCov)
+        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$seq,conts2$seq,conts1$seqName,conts2$seqName,conts1$rps,conts2$rps)
 
         contigs = subset(contigs,seqName != table$name1[i] && seqName != table$name2[i])
-        contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[6]]),end = c(contigs$end,newConts[[2]],newConts[[7]]),coverage = c(contigs$coverage,newConts[[4]],newConts[[9]]),seqName= c(contigs$seqName,newConts[[5]],newConts[[10]]),seq = c(contigs$seq,newConts[[3]],newConts[[8]]))
+        contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[2]]),end = c(contigs$end,newConts[[3]],newConts[[4]]),seq = c(contigs$seq,newConts[[5]],newConts[[6]]),coverage = c(contigs$coverage,newConts[[7]],newConts[[8]]),seqName= c(contigs$seqName,newConts[[9]],newConts[[10]]),rps = c(contigs$rps,newConts[[11]],newConts[[12]]))
     }
     return(contigs)
 }
@@ -173,16 +175,16 @@ randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw
         }
         if(numberOfReads > length(data$pos) && !redraw){
             whch =c(whch,1:length(data$pos))
+            sampleNrs = c(sampleNrs,rep(i,length(data$pos)))
         }
         else{
-            whch = sample(1:length(data$pos),numberOfReads,replace = redraw)
+            whch = c(whch,sample(1:length(data$pos),numberOfReads,replace = redraw))
+            sampleNrs = c(sampleNrs,rep(i,numberOfReads))
         }
-        sampleNrs = c(sampleNrs,rep(i,length(whch)))
     }
-
-
-    res = data[whch,]
-    res["sampleNr"] = sampleNrs
+    tmp = data.table(whch = whch,sampleNrs = sampleNrs,key = "whch")
+    res = data[tmp$whch,]
+    res["sampleNr"] = tmp$sampleNrs
     return(res)
 }
 

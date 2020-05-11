@@ -59,7 +59,7 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
       DS = dir("~/RealReadSimDS")
 
       reads = scanBam(bam,param =  params)
-      reads = data.table(pos = reads[[1]]$pos,width = reads[[1]]$qwidth,seq = reads[[1]]$rname,key = "seq")
+      reads = data.table(pos = reads[[1]]$pos,width = reads[[1]]$qwidth,seq = reads[[1]]$rname,key = c("seq","pos"))
       #system(paste("rm",bam))         users choice?
 
       this = paste0(Sys.getenv("HOME"),"/RealReadSimDS/",seqNames[i])
