@@ -35,13 +35,13 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
       #---------------------------- if not bams -> make bams | else use bams ------------------------------------
 
       if(length(bams) == 0){
-        system(paste("bowtie2-build ",fasta," ~/RealReadSimDS/index"))
+        system(paste("bowtie2-build ",fasta," ~/RealReadSimDS/index"),ignore.stdout = TRUE,ignore.stderr = TRUE)
 
         if(length(fastq2) == 0){
-          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -U ",fastq1," -S ~/RealReadSimDS/out.sam | samtools view -bS - > ~/RealReadSimDS/out.bam"),ignore.stdout = TRUE)
+          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -U ",fastq1," -S ~/RealReadSimDS/out.sam | samtools view -bS - > ~/RealReadSimDS/out.bam"),ignore.stdout = TRUE,ignore.stderr = TRUE)
         }
         else{
-          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -1 ",fastq1,"-2 ",fastq2," -S ~/RealReadSimDS/out.sam | samtools view -bS - > ~/RealReadSimDS/out.bam"),ignore.stdout = TRUE)
+          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -1 ",fastq1,"-2 ",fastq2," -S ~/RealReadSimDS/out.sam | samtools view -bS - > ~/RealReadSimDS/out.bam"),ignore.stdout = TRUE,ignore.stderr = TRUE)
         }
 
         #asBam("~/RealReadSimDS/out.sam","~/RealReadSimDS/out")
@@ -82,17 +82,21 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
       length = 0
       meanWidth = mean(reads$width)
       sequences = readDNAStringSet(fasta[i])
+      names(sequences) = gsub(" .*","",names(sequences))
 
       for(j in 1:length(seqs)){
         seqLngths[n] = unname(seqs[j])
         seqNms[n] = names(seqs[j])
         seqMnWdths[n] = meanWidth
+
         seqFastas[n] = paste0(this,"/",names(seqs[j]),".fasta")
         seqDir[n] = this
         lngth[n] = sum(seqs)
+
         seqData[n] = dataPath
-        subSequences = sequences[names(sequences) == seqs[j]]
+        subSequences = sequences[names(sequences) == names(seqs[j])]
         seqMinOv[n] = calcMinOverlap(toString(subSequences),meanWidth)
+
         n = n +1
       }
 
@@ -185,7 +189,7 @@ crossMapRRSDS <- function(){
         #------------------------------ mapping the reads onto the other seq with bowtie2 -----------------------------------------------------------------
 
         system(paste0("bowtie2-build ",to$fasta," ",to$dir,"/index"),ignore.stdout = TRUE,ignore.stderr = TRUE)
-        system(paste0("bowtie2 --no-unal -x ",to$dir,"/index ",readInput," -S ",from$dir,"/out.sam"))#,ignore.stdout = TRUE,ignore.stderr = TRUE)
+        system(paste0("bowtie2 --no-unal -x ",to$dir,"/index ",readInput," -S ",from$dir,"/out.sam"),ignore.stdout = TRUE,ignore.stderr = TRUE)
 
         system(paste0("samtools view -bS ",from$dir,"/out.sam > ",from$dir,"/out.bam"))
         #------------------------------- readiying and saving the read data -------------------------------------------

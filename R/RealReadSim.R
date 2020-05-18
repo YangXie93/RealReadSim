@@ -14,7 +14,7 @@
 #' @param seed A integer value used as seed when reapeatable = TRUE
 #' @export
 
-realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500){
+realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500,minDist = 0.8){
 
     library(Rsamtools)
     library(data.table)
@@ -26,7 +26,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     covAt = 1
     nrOfSamples = length(coverage[1,])
 
-    params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)  #(?) mapqFilter
+    params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)
     seqNames = c()
 
     for(i in 1:length(filenames[,1])){          # reading in the names of all sequences involved
@@ -96,31 +96,29 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         if(covAt < length(coverage)){
             covAt = covAt +1
         }
-        print(Sys.time() -starttime)#################################################################
 
     }
     temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,seqName = unlist(seqs),seq = unlist(sequ),rps = readsPerSample)
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
-    coasstime = Sys.time()###################################
 
-    res = coAssembleRRSDS(temp)
+    res = coAssembleRRSDS(temp,minDist)
     res$length = (res$end-res$start)+1
     res = subset(res,length >= minContigLength)
     res$covVec = calcCovVec(res$rps,res$length)
-    coasstime = Sys.time() -coasstime#############################
-
+    #---------------------------------------------------------------------------------------------------
     if(humanReadable){
         #RealReadSim::makeHumanReadable(cov,res)
     }
 
-    print(coasstime)#################################################
     print(Sys.time() -starttime)#################################################################
     return(res)
 }
 
-coAssembleRRSDS <- function(contigs){
+# function to simulate coassembly using coAssembly.cpp
+#
+coAssembleRRSDS <- function(contigs,minDist){
     RRSDS = paste0(Sys.getenv("HOME"),"/RealReadSimDS/")
 
     involved = unique(contigs$seqName)
@@ -140,7 +138,7 @@ coAssembleRRSDS <- function(contigs){
         conts1 = subset(contigs,seqName == table$name1[i])
         conts2 = subset(contigs,seqName == table$name2[i])
 
-        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$seq,conts2$seq,conts1$seqName,conts2$seqName,conts1$rps,conts2$rps)
+        newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$seq,conts2$seq,conts1$seqName,conts2$seqName,conts1$rps,conts2$rps,minDist)
 
         contigs = subset(contigs,seqName != table$name1[i] && seqName != table$name2[i])
         contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[2]]),end = c(contigs$end,newConts[[3]],newConts[[4]]),seq = c(contigs$seq,newConts[[5]],newConts[[6]]),coverage = c(contigs$coverage,newConts[[7]],newConts[[8]]),seqName= c(contigs$seqName,newConts[[9]],newConts[[10]]),rps = c(contigs$rps,newConts[[11]],newConts[[12]]))
@@ -148,7 +146,7 @@ coAssembleRRSDS <- function(contigs){
     return(contigs)
 }
 
-
+#
 makeHumanReadable <- function(cov,res){
     par(mfrow = c(2,1))
     x = seq(1,length(res),by = 3)
@@ -163,7 +161,8 @@ makeHumanReadable <- function(cov,res){
     par(mfrow = c(1,1))
 }
 
-
+# function to draw reads the necessary reads randomly
+#
 randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw,sampleNr = 1){
 
     whch = c()
@@ -182,9 +181,12 @@ randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw
             sampleNrs = c(sampleNrs,rep(i,numberOfReads))
         }
     }
-    tmp = data.table(whch = whch,sampleNrs = sampleNrs,key = "whch")
-    res = data[tmp$whch,]
-    res["sampleNr"] = tmp$sampleNrs
+    names(whch) = toString(sampleNrs)
+    print(whch)
+    whch = sort(whch)
+    res = data[whch,]
+    res["sampleNr"] = as.integer(names(whch))
+    print(as.integer(names(whch)))
     return(res)
 }
 

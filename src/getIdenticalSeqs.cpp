@@ -5,6 +5,11 @@
 #include <algorithm>
 
 using namespace Rcpp;
+
+
+// class representing a contig that is identical on two different genomes. It gets reads that mapped to both genomes in the a cohesive
+// region and builds a contig seeing which reads makeup a contiguos identical sequence which is then saved
+//
 class Contig{
     public:
 
@@ -90,8 +95,9 @@ class Contig{
         bool readOut = false;
 };
 
+// function tying the Contig object to R
+//
 //[[Rcpp::export]]
-
 List getIdenticalSeqs(std::vector<int>& starts1,std::vector<int>& ends1,std::vector<int>& starts2,std::vector<int>& ends2,int minL = 0){
 
     std::vector<int> contStarts1;

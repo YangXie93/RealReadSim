@@ -5,43 +5,6 @@
 
 using namespace Rcpp;
 
-// calcMinOverlap
-int calcMinOverlap(std::string seq, int meanWidth);
-RcppExport SEXP _RealReadSim_calcMinOverlap(SEXP seqSEXP, SEXP meanWidthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< int >::type meanWidth(meanWidthSEXP);
-    rcpp_result_gen = Rcpp::wrap(calcMinOverlap(seq, meanWidth));
-    return rcpp_result_gen;
-END_RCPP
-}
-// subSeqs
-std::vector<std::string> subSeqs(std::string seq, std::vector<int> starts, std::vector<int> ends);
-RcppExport SEXP _RealReadSim_subSeqs(SEXP seqSEXP, SEXP startsSEXP, SEXP endsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type starts(startsSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type ends(endsSEXP);
-    rcpp_result_gen = Rcpp::wrap(subSeqs(seq, starts, ends));
-    return rcpp_result_gen;
-END_RCPP
-}
-// calcCovVec
-Rcpp::List calcCovVec(std::list<std::vector<int> > readsPerSample, std::vector<int> lengths);
-RcppExport SEXP _RealReadSim_calcCovVec(SEXP readsPerSampleSEXP, SEXP lengthsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::list<std::vector<int> > >::type readsPerSample(readsPerSampleSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type lengths(lengthsSEXP);
-    rcpp_result_gen = Rcpp::wrap(calcCovVec(readsPerSample, lengths));
-    return rcpp_result_gen;
-END_RCPP
-}
 // translateOverlap
 std::vector<int> translateOverlap(int c1s, int c1e, int c2s, int c2e, int as1, int ae1, int as2, int ae2);
 RcppExport SEXP _RealReadSim_translateOverlap(SEXP c1sSEXP, SEXP c1eSEXP, SEXP c2sSEXP, SEXP c2eSEXP, SEXP as1SEXP, SEXP ae1SEXP, SEXP as2SEXP, SEXP ae2SEXP) {
@@ -79,8 +42,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // mkChimeras
-List mkChimeras(std::vector<int>& starts1, std::vector<int>& ends1, std::list<std::vector<int> >& covs1, std::vector<int>& starts2, std::vector<int>& ends2, std::list<std::vector<int> >& covs2, std::vector<int>& aStarts1, std::vector<int>& aEnds1, std::vector<int>& aStarts2, std::vector<int>& aEnds2, std::list<std::string>& seqs1, std::list<std::string>& seqs2, std::vector<std::string>& name1, std::vector<std::string>& name2, std::list<std::vector<int> >& readNrVecs1, std::list<std::vector<int> >& readNrVecs2);
-RcppExport SEXP _RealReadSim_mkChimeras(SEXP starts1SEXP, SEXP ends1SEXP, SEXP covs1SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP covs2SEXP, SEXP aStarts1SEXP, SEXP aEnds1SEXP, SEXP aStarts2SEXP, SEXP aEnds2SEXP, SEXP seqs1SEXP, SEXP seqs2SEXP, SEXP name1SEXP, SEXP name2SEXP, SEXP readNrVecs1SEXP, SEXP readNrVecs2SEXP) {
+List mkChimeras(std::vector<int>& starts1, std::vector<int>& ends1, std::list<std::vector<int> >& covs1, std::vector<int>& starts2, std::vector<int>& ends2, std::list<std::vector<int> >& covs2, std::vector<int>& aStarts1, std::vector<int>& aEnds1, std::vector<int>& aStarts2, std::vector<int>& aEnds2, std::list<std::string>& seqs1, std::list<std::string>& seqs2, std::vector<std::string>& name1, std::vector<std::string>& name2, std::list<std::vector<int> >& readNrVecs1, std::list<std::vector<int> >& readNrVecs2, double minimalDistance);
+RcppExport SEXP _RealReadSim_mkChimeras(SEXP starts1SEXP, SEXP ends1SEXP, SEXP covs1SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP covs2SEXP, SEXP aStarts1SEXP, SEXP aEnds1SEXP, SEXP aStarts2SEXP, SEXP aEnds2SEXP, SEXP seqs1SEXP, SEXP seqs2SEXP, SEXP name1SEXP, SEXP name2SEXP, SEXP readNrVecs1SEXP, SEXP readNrVecs2SEXP, SEXP minimalDistanceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -100,7 +63,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<std::string>& >::type name2(name2SEXP);
     Rcpp::traits::input_parameter< std::list<std::vector<int> >& >::type readNrVecs1(readNrVecs1SEXP);
     Rcpp::traits::input_parameter< std::list<std::vector<int> >& >::type readNrVecs2(readNrVecs2SEXP);
-    rcpp_result_gen = Rcpp::wrap(mkChimeras(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, readNrVecs1, readNrVecs2));
+    Rcpp::traits::input_parameter< double >::type minimalDistance(minimalDistanceSEXP);
+    rcpp_result_gen = Rcpp::wrap(mkChimeras(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, readNrVecs1, readNrVecs2, minimalDistance));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -151,17 +115,54 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// calcMinOverlap
+int calcMinOverlap(std::string seq, int meanWidth);
+RcppExport SEXP _RealReadSim_calcMinOverlap(SEXP seqSEXP, SEXP meanWidthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< int >::type meanWidth(meanWidthSEXP);
+    rcpp_result_gen = Rcpp::wrap(calcMinOverlap(seq, meanWidth));
+    return rcpp_result_gen;
+END_RCPP
+}
+// subSeqs
+std::vector<std::string> subSeqs(std::string seq, std::vector<int> starts, std::vector<int> ends);
+RcppExport SEXP _RealReadSim_subSeqs(SEXP seqSEXP, SEXP startsSEXP, SEXP endsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type seq(seqSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type starts(startsSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type ends(endsSEXP);
+    rcpp_result_gen = Rcpp::wrap(subSeqs(seq, starts, ends));
+    return rcpp_result_gen;
+END_RCPP
+}
+// calcCovVec
+Rcpp::List calcCovVec(std::list<std::vector<int> > readsPerSample, std::vector<int> lengths);
+RcppExport SEXP _RealReadSim_calcCovVec(SEXP readsPerSampleSEXP, SEXP lengthsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::list<std::vector<int> > >::type readsPerSample(readsPerSampleSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type lengths(lengthsSEXP);
+    rcpp_result_gen = Rcpp::wrap(calcCovVec(readsPerSample, lengths));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_RealReadSim_calcMinOverlap", (DL_FUNC) &_RealReadSim_calcMinOverlap, 2},
-    {"_RealReadSim_subSeqs", (DL_FUNC) &_RealReadSim_subSeqs, 3},
-    {"_RealReadSim_calcCovVec", (DL_FUNC) &_RealReadSim_calcCovVec, 2},
     {"_RealReadSim_translateOverlap", (DL_FUNC) &_RealReadSim_translateOverlap, 8},
     {"_RealReadSim_hasOverlap", (DL_FUNC) &_RealReadSim_hasOverlap, 8},
-    {"_RealReadSim_mkChimeras", (DL_FUNC) &_RealReadSim_mkChimeras, 16},
+    {"_RealReadSim_mkChimeras", (DL_FUNC) &_RealReadSim_mkChimeras, 17},
     {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 7},
     {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 5},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
+    {"_RealReadSim_calcMinOverlap", (DL_FUNC) &_RealReadSim_calcMinOverlap, 2},
+    {"_RealReadSim_subSeqs", (DL_FUNC) &_RealReadSim_subSeqs, 3},
+    {"_RealReadSim_calcCovVec", (DL_FUNC) &_RealReadSim_calcCovVec, 2},
     {NULL, NULL, 0}
 };
 
