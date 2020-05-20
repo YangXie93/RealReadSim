@@ -27,7 +27,7 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
   hasNew = FALSE
 
   for(i in 1:length(fasta)){#------------------------- for all genomes --------------------------------------
-
+    print(paste0("genome nr: ",i))
     if(!is.inRRSDS(seqNames[i])){
       hasOut = FALSE                    # mark wether there is output to be removed later
       hasNew = TRUE
@@ -38,13 +38,15 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
         system(paste("bowtie2-build ",fasta," ~/RealReadSimDS/index"),ignore.stdout = TRUE,ignore.stderr = TRUE)
 
         if(length(fastq2) == 0){
-          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -U ",fastq1," -S ~/RealReadSimDS/out.sam | samtools view -bS - > ~/RealReadSimDS/out.bam"),ignore.stdout = TRUE,ignore.stderr = TRUE)
+          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -U ",fastq1[i]," -S ~/RealReadSimDS/out.sam"),ignore.stdout = TRUE)#,ignore.stderr = TRUE)
         }
         else{
-          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -1 ",fastq1,"-2 ",fastq2," -S ~/RealReadSimDS/out.sam | samtools view -bS - > ~/RealReadSimDS/out.bam"),ignore.stdout = TRUE,ignore.stderr = TRUE)
+          print(paste(fasta[i],fastq1[i],fastq2[i]))
+          system(paste("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ~/RealReadSimDS/index -1 ",fastq1[i],"-2 ",fastq2[i]," -S ~/RealReadSimDS/out.sam"),ignore.stdout = TRUE)#,ignore.stderr = TRUE)
         }
 
         #asBam("~/RealReadSimDS/out.sam","~/RealReadSimDS/out")
+        system("samtools view -bS ~/RealReadSimDS/out.sam > ~/RealReadSimDS/out.bam")
         system("rm ~/RealReadSimDS/out.sam")
         bam = "~/RealReadSimDS/out.bam"
         hasOut = TRUE
@@ -81,6 +83,7 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
 
       length = 0
       meanWidth = mean(reads$width)
+      print(meanWidth)###########################
       sequences = readDNAStringSet(fasta[i])
       names(sequences) = gsub(" .*","",names(sequences))
 

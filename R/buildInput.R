@@ -1,5 +1,13 @@
 buildInputCsv <- function(fastaPath,readPath,mode = "fastq",out = "~"){
 
+    if(substr(fastaPath,nchar(fastaPath),nchar(fastaPath)) != "/"){
+        fastaPath = paste0(fastaPath,"/")
+    }
+
+    if(substr(readPath,nchar(readPath),nchar(readPath)) != "/"){
+        readPath = paste0(readPath,"/")
+    }
+
     fastas = dir(fastaPath)
     reads = dir(readPath)
     if(mode == "fastq"){
@@ -10,39 +18,34 @@ buildInputCsv <- function(fastaPath,readPath,mode = "fastq",out = "~"){
     }
     namesFasta = sub(".fna|.fasta|.final.*|.gt1kb.*|.scaffolds|_run.*|.*.fai","",fastas)
 
-    link = c()
-    j = 1
-    for(i in 1:length(namesReads)){
-        n = which(namesFasta == namesReads[i])
-        print(namesReads[i])
-        if(length(n) > 0){
-            link[j] = n
-            j = j +1
-        }
-    }
-    namesFasta = namesFasta[link]
-    fastas = fastas[link]
+    print(namesFasta[!(namesFasta %in% namesReads)])
+
+    fastas = fastas[namesFasta %in% namesReads]
+    namesFasta = namesFasta[namesFasta %in% namesReads]
+
 
     rLink1 = c()
     rLink2 = c()
-    print(namesFasta)
     for(i in 1:length(namesFasta)){
-        rLink1[i] = reads[which(namesReads == namesFasta[i])][1]
-        rLink2[i] = reads[which(namesReads == namesFasta[i])][2]
+        rLink1[i] = reads[which(namesReads == namesFasta[i])[1]]
+        rLink2[i] = reads[which(namesReads == namesFasta[i])[2]]
     }
     for(i in 1:length(rLink2)){
         if(!is.na(rLink2[i])){
-            rLink2[i] = paste0(readPath,rLink2)
+            rLink2[i] = paste0(readPath,rLink2[i])
         }
         else{
             rLink2[i] = ""
         }
     }
+    print(length(namesFasta))
+    print(length(rLink1))
+    print(length(rLink2))
     if(paste0(rLink2,collapse = "") == ""){
         table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath,rLink1))
     }
     else{
         table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath,rLink1),readsRev = rLink2)
     }
-    write.csv(table,out,row.names = FALSE)
+    write.csv(table,out,row.names = FALSE,quote = FALSE)
 }

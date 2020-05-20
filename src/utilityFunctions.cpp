@@ -62,9 +62,9 @@ int calcMinOverlap(std::string seq,int meanWidth){
         }
     }
     double tmp1 = (double)best/ (double) seq.size();
-    double tmp2 = 1.0;
+    double tmp2 = tmp1;
     int minOverlap = 1;
-    while(tmp2 > (0.1/(meanWidth*meanWidth))){
+    while(tmp2 > (0.000001/meanWidth)){
         tmp2 *= tmp1;
         minOverlap++;
     }

@@ -14,7 +14,7 @@
 #' @param seed A integer value used as seed when reapeatable = TRUE
 #' @export
 
-realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500,minDist = 0.8){
+realReadSim <- function(filenames_csv,coverage = 0,takeAll = TRUE,nrOfSamples = 1,bowtieOptions = "--no-unal",humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500,minDist = 0.8){
 
     library(Rsamtools)
     library(data.table)
@@ -24,7 +24,6 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
     filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
 
     covAt = 1
-    nrOfSamples = length(coverage[1,])
 
     params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)
     seqNames = c()
@@ -36,21 +35,21 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
         }
         else{                                   # reading from fasta files
             seqData = readDNAStringSet(filenames[i,1])
-            seqNames[i] = gsub(" .*","",names(seqData))[which.max(widht(seqData))]
+            seqNames[i] = gsub(" .*","",names(seqData))[which.max(width(seqData))]
         }
     }
 
     #--------------------------- checking if already in Datasystem and if not adding to datasystem -------------
 
     if(readAsBams){
-        catalogue = RealReadSim::addToDataSystem(seqNames,bam = filenames[,2],fasta = filenames[,1],minMapq = minMapq,bowtieOptions)
+        catalogue = RealReadSim::addToDataSystem(seqNames,bam = filenames[,2],fasta = filenames[,1],minMapq = minMapq,bowtieOptions = bowtieOptions)
     }
     else{
-        if(length(filenames[,2][grep(" ",filenames[,2])]) > 0){
-            catalogue = RealReadSim::addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = gsub(".*","",filenames[,2]),fastq2 = gsub(".* ","",filenames[,2]),minMapq = minMapq,bowtieOptions)
+        if(length(filenames) > 2){
+            catalogue = RealReadSim::addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],fastq2 = filenames[,3],minMapq = minMapq,bowtieOptions =  bowtieOptions )
         }
         else{
-            catalogue = RealReadSim::addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],minMapq = minMapq,bowtieOptions)
+            catalogue = RealReadSim::addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],minMapq = minMapq,bowtieOptions =  bowtieOptions)
         }
     }
 
@@ -73,7 +72,7 @@ realReadSim <- function(filenames_csv,coverage,bowtieOptions = "--no-unal",human
 
         partialCatalogue = subset(catalogue,dir == DS[i])
         fullData = readRDS(partialCatalogue$data[1])
-        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt,],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw,nrOfSamples)
+        fullData = RealReadSim::randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt,],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw,nrOfSamples,takeAll)
         for(j in 1:length(partialCatalogue$name)){
 
             data = subset(fullData,seq == partialCatalogue$name[j])
@@ -163,12 +162,18 @@ makeHumanReadable <- function(cov,res){
 
 # function to draw reads the necessary reads randomly
 #
-randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw,sampleNr = 1){
+randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw,sampleNr = 1,takeAll){
+
 
     whch = c()
     sampleNrs = c()
     for(i in 1:sampleNr){
-        numberOfReads = as.integer((sum(seqLength) *coverage[i])/meanWidht)
+        if(!takeAll){
+            numberOfReads = as.integer((sum(seqLength) *coverage[i])/meanWidht)
+        }
+        else{
+            numberOfReads = length(data$pos)
+        }
         if(repeatable){
             set.seed(seed)
         }
@@ -181,12 +186,10 @@ randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw
             sampleNrs = c(sampleNrs,rep(i,numberOfReads))
         }
     }
-    names(whch) = toString(sampleNrs)
-    print(whch)
+    names(whch) = sampleNrs
     whch = sort(whch)
     res = data[whch,]
-    res["sampleNr"] = as.integer(names(whch))
-    print(as.integer(names(whch)))
+    res = cbind(res, sampleNr = as.integer(names(whch)))
     return(res)
 }
 

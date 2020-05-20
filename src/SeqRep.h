@@ -222,7 +222,6 @@ public:
       for(int i = 0;i < nr && *(readEnds+i) <= end;i++){
 
         if(*(readStarts+i) >= start && *(ts) != i){
-          Rcpp::Rcout << nrOfSamples << " " << *(sampleNr+i) << " " <<*(readEnds+i)-*(readStarts+i)+1 << std::endl;
             *(res+*(sampleNr+i)-1) += *(readEnds+i)-*(readStarts+i)+1;
             if(*ts != -1){
               ts++;
