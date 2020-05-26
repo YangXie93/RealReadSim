@@ -98,7 +98,7 @@ class Contig{
 // function tying the Contig object to R
 //
 //[[Rcpp::export]]
-List getIdenticalSeqs(std::vector<int>& starts1,std::vector<int>& ends1,std::vector<int>& starts2,std::vector<int>& ends2,int minL = 0){
+List getIdenticalSeqs(std::vector<int>& starts1,std::vector<int>& ends1,std::vector<int>& starts2,std::vector<int>& ends2,std::string nm1,std::string nm2,int minL = 0){
 
     std::vector<int> contStarts1;
     std::vector<int> contEnds1;
@@ -125,5 +125,29 @@ List getIdenticalSeqs(std::vector<int>& starts1,std::vector<int>& ends1,std::vec
             n++;
         }
     }
-    return List::create(contNms,contStarts1,contEnds1,contStarts2,contEnds2);
+    return List::create(contNms,contStarts1,contEnds1,contStarts2,contEnds2,nm1,nm2);
 }
+//[[Rcpp::export]]
+List getIdenticalSeqsList(std::vector<std::string> &names1,std::list<std::vector<int> >& starts1,std::list<std::vector<int> >& ends1,std::vector<std::string> &names2,std::list<std::vector<int> >& starts2,std::list<std::vector<int> >& ends2,int minL = 0){
+
+    List res;
+
+    std::list<std::vector<int> >::iterator s1;
+    std::list<std::vector<int> >::iterator s2 = starts2.begin();
+    std::list<std::vector<int> >::iterator e1 = ends1.begin();
+    std::list<std::vector<int> >::iterator e2 = ends2.begin();
+    std::vector<std::string>::iterator nm1 = names1.begin();
+    std::vector<std::string>::iterator nm2 = names2.begin();
+
+
+    for(s1 = starts1.begin();s1 != starts1.end();s1++){
+        res.push_back(getIdenticalSeqs(*s1,*e1,*s2,*e2,*nm1,*nm2,minL));
+        s2++;
+        e1++;
+        e2++;
+        nm1++;
+        nm2++;
+    }
+    return res;
+}
+

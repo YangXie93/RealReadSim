@@ -6,8 +6,10 @@
 \usage{
 realReadSim(
   filenames_csv,
-  coverage,
-  bowtieOptions = "--no-unal",
+  coverage = 0,
+  takeAll = TRUE,
+  nrOfSamples = 1,
+  bowtieOptions = c("--no-unal", "-p 3"),
   humanReadable = FALSE,
   readAsBams = TRUE,
   minMapq = 40,
@@ -15,7 +17,8 @@ realReadSim(
   repeatable = TRUE,
   seed = 0,
   minContigLength = 500,
-  minDist = 0.8
+  minDist = 0.8,
+  minIdenticalLength = 2000
 )
 }
 \arguments{

@@ -9,23 +9,47 @@
 
 
 //[[Rcpp::plugins(cpp14)]]
+
+//[[Rcpp::export]]
+void makeFastaOutput(std::vector<std::sring> &names,std::vector<std::string> &seqs){
+
+
+
+}
+
+
 //[[Rcpp::export]]
 
-bool sequenceToFastaReads(std::vector<int>& starts,std::string& sequence,int meanWidth,std::string& newFasta,std::string& nameTag){
+bool sequenceToFastaReads(std::vector<std::vector<int> >& starts,std::vector<std::string>& sequence,int meanWidth,std::string& newFasta,std::vector<std::string>& nameTag){
     bool x = true;
     if(std::ifstream(newFasta)){
         x = false;
     }
     std::ofstream outfile (x ? std::ofstream(newFasta):std::ofstream(newFasta,std::ios::app));
+
     if(outfile.is_open()){
-        for(int i = 0;i < (int) starts.size();i++){
-            outfile << ">"+nameTag +"_" +std::to_string(starts[i]+1) << std::endl;
-            if(starts[i] +meanWidth < (int) sequence.length()){
-                outfile << sequence.substr(starts[i],meanWidth) << std::endl;
+
+        std::vector<std::string>::iterator seqIt;
+        std::vector<std::string>::iterator nameTagIt = nameTag.begin();
+        std::vector<std::vector<int> >::iterator startIt = starts.begin();
+
+        std::vector<int>::iterator stIt;
+
+        for(seqIt = sequence.begin();seqIt != sequence.end();seqIt++){
+
+
+
+            for(stIt = (*startIt).begin();stIt != (*startIt).end();stIt++){
+                outfile << ">"+(*nameTagIt) +";;" +std::to_string((*stIt)+1) << std::endl;
+                if(*stIt +meanWidth <= (int) (*seqIt).length()){
+                    outfile << (*seqIt).substr(*stIt,meanWidth) << std::endl;
+                }
+                else{
+                    outfile << (*seqIt).substr(*stIt,(*seqIt).length() -1) << (*seqIt).substr(0,meanWidth - ((*seqIt).length() - (*stIt))) << std::endl;
+                }
             }
-            else{
-                outfile << sequence.substr(starts[i],sequence.length() -1) << sequence.substr(0,meanWidth - (sequence.length() -starts[i])) << std::endl;
-            }
+            nameTagIt++;
+            startIt++;
         }
         outfile.close();
         return true;
@@ -39,6 +63,7 @@ bool sequenceToFastaReads(std::vector<int>& starts,std::string& sequence,int mea
 //
 //[[Rcpp::export]]
 int calcMinOverlap(std::string seq,int meanWidth){
+
     int bases[] = {0,0,0,0};
     for(int i = 0;i < (int) seq.size();i++ ){
         if(seq.at(i) == 'A' ||seq.at(i) == 'a'){
@@ -63,6 +88,7 @@ int calcMinOverlap(std::string seq,int meanWidth){
     }
     double tmp1 = (double)best/ (double) seq.size();
     double tmp2 = tmp1;
+
     int minOverlap = 1;
     while(tmp2 > (0.000001/meanWidth)){
         tmp2 *= tmp1;

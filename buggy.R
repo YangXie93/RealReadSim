@@ -59,10 +59,10 @@
 # mkChimeras(s1,e1,cov1,s2,e2,cov2,a1s,a1e,a2s,a2e,sq1,sq2,nm1,nm2)
 
 library(RealReadSim)
-x = realReadSim("/home/yang/uni/BA-Projekt-Data/testBinning.txt",matrix(c(70,110,50,100),ncol = 2),nrOfSamples = 2,takeAll = FALSE)
+#x = realReadSim("/home/yang/uni/BA-Projekt-Data/testBinning.txt",takeAll = TRUE,metagenomeDir = "~/testMetagenome")
 
-x = realReadSim("~/uni/BA-Projekt-Data/testRRS.txt",takeAll = TRUE,readAsBams = FALSE)
-
+#x = realReadSim("~/uni/BA-Projekt-Data/testRRS.txt",takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS")
+x = realReadSim(takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS")
 # n = 0
 # for(i in 1:length(x$start)){
 #         if(x$end[i]-x$start[i]+1 != length(x$coverage[[i]])){

@@ -86,8 +86,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // getIdenticalSeqs
-List getIdenticalSeqs(std::vector<int>& starts1, std::vector<int>& ends1, std::vector<int>& starts2, std::vector<int>& ends2, int minL);
-RcppExport SEXP _RealReadSim_getIdenticalSeqs(SEXP starts1SEXP, SEXP ends1SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP minLSEXP) {
+List getIdenticalSeqs(std::vector<int>& starts1, std::vector<int>& ends1, std::vector<int>& starts2, std::vector<int>& ends2, std::string nm1, std::string nm2, int minL);
+RcppExport SEXP _RealReadSim_getIdenticalSeqs(SEXP starts1SEXP, SEXP ends1SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP nm1SEXP, SEXP nm2SEXP, SEXP minLSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -95,22 +95,41 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<int>& >::type ends1(ends1SEXP);
     Rcpp::traits::input_parameter< std::vector<int>& >::type starts2(starts2SEXP);
     Rcpp::traits::input_parameter< std::vector<int>& >::type ends2(ends2SEXP);
+    Rcpp::traits::input_parameter< std::string >::type nm1(nm1SEXP);
+    Rcpp::traits::input_parameter< std::string >::type nm2(nm2SEXP);
     Rcpp::traits::input_parameter< int >::type minL(minLSEXP);
-    rcpp_result_gen = Rcpp::wrap(getIdenticalSeqs(starts1, ends1, starts2, ends2, minL));
+    rcpp_result_gen = Rcpp::wrap(getIdenticalSeqs(starts1, ends1, starts2, ends2, nm1, nm2, minL));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getIdenticalSeqsList
+List getIdenticalSeqsList(std::vector<std::string>& names1, std::list<std::vector<int> >& starts1, std::list<std::vector<int> >& ends1, std::vector<std::string>& names2, std::list<std::vector<int> >& starts2, std::list<std::vector<int> >& ends2, int minL);
+RcppExport SEXP _RealReadSim_getIdenticalSeqsList(SEXP names1SEXP, SEXP starts1SEXP, SEXP ends1SEXP, SEXP names2SEXP, SEXP starts2SEXP, SEXP ends2SEXP, SEXP minLSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type names1(names1SEXP);
+    Rcpp::traits::input_parameter< std::list<std::vector<int> >& >::type starts1(starts1SEXP);
+    Rcpp::traits::input_parameter< std::list<std::vector<int> >& >::type ends1(ends1SEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type names2(names2SEXP);
+    Rcpp::traits::input_parameter< std::list<std::vector<int> >& >::type starts2(starts2SEXP);
+    Rcpp::traits::input_parameter< std::list<std::vector<int> >& >::type ends2(ends2SEXP);
+    Rcpp::traits::input_parameter< int >::type minL(minLSEXP);
+    rcpp_result_gen = Rcpp::wrap(getIdenticalSeqsList(names1, starts1, ends1, names2, starts2, ends2, minL));
     return rcpp_result_gen;
 END_RCPP
 }
 // sequenceToFastaReads
-bool sequenceToFastaReads(std::vector<int>& starts, std::string& sequence, int meanWidth, std::string& newFasta, std::string& nameTag);
+bool sequenceToFastaReads(std::vector<std::vector<int> >& starts, std::vector<std::string>& sequence, int meanWidth, std::string& newFasta, std::vector<std::string>& nameTag);
 RcppExport SEXP _RealReadSim_sequenceToFastaReads(SEXP startsSEXP, SEXP sequenceSEXP, SEXP meanWidthSEXP, SEXP newFastaSEXP, SEXP nameTagSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<int>& >::type starts(startsSEXP);
-    Rcpp::traits::input_parameter< std::string& >::type sequence(sequenceSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int> >& >::type starts(startsSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type sequence(sequenceSEXP);
     Rcpp::traits::input_parameter< int >::type meanWidth(meanWidthSEXP);
     Rcpp::traits::input_parameter< std::string& >::type newFasta(newFastaSEXP);
-    Rcpp::traits::input_parameter< std::string& >::type nameTag(nameTagSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type nameTag(nameTagSEXP);
     rcpp_result_gen = Rcpp::wrap(sequenceToFastaReads(starts, sequence, meanWidth, newFasta, nameTag));
     return rcpp_result_gen;
 END_RCPP
@@ -158,7 +177,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RealReadSim_hasOverlap", (DL_FUNC) &_RealReadSim_hasOverlap, 8},
     {"_RealReadSim_mkChimeras", (DL_FUNC) &_RealReadSim_mkChimeras, 17},
     {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 7},
-    {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 5},
+    {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 7},
+    {"_RealReadSim_getIdenticalSeqsList", (DL_FUNC) &_RealReadSim_getIdenticalSeqsList, 7},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
     {"_RealReadSim_calcMinOverlap", (DL_FUNC) &_RealReadSim_calcMinOverlap, 2},
     {"_RealReadSim_subSeqs", (DL_FUNC) &_RealReadSim_subSeqs, 3},

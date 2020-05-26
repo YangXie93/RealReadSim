@@ -2,38 +2,42 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 translateOverlap <- function(c1s, c1e, c2s, c2e, as1, ae1, as2, ae2) {
-    .Call(`_RealReadSim_translateOverlap`, c1s, c1e, c2s, c2e, as1, ae1, as2, ae2)
+    .Call('_RealReadSim_translateOverlap', PACKAGE = 'RealReadSim', c1s, c1e, c2s, c2e, as1, ae1, as2, ae2)
 }
 
 hasOverlap <- function(c1s, c1e, c2s, c2e, a1s, a1e, a2s, a2e) {
-    .Call(`_RealReadSim_hasOverlap`, c1s, c1e, c2s, c2e, a1s, a1e, a2s, a2e)
+    .Call('_RealReadSim_hasOverlap', PACKAGE = 'RealReadSim', c1s, c1e, c2s, c2e, a1s, a1e, a2s, a2e)
 }
 
 mkChimeras <- function(starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, readNrVecs1, readNrVecs2, minimalDistance) {
-    .Call(`_RealReadSim_mkChimeras`, starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, readNrVecs1, readNrVecs2, minimalDistance)
+    .Call('_RealReadSim_mkChimeras', PACKAGE = 'RealReadSim', starts1, ends1, covs1, starts2, ends2, covs2, aStarts1, aEnds1, aStarts2, aEnds2, seqs1, seqs2, name1, name2, readNrVecs1, readNrVecs2, minimalDistance)
 }
 
 evalCoverage <- function(pos, width, sampleID, length, minOverlap, minContigLength, nrOfSamples) {
-    .Call(`_RealReadSim_evalCoverage`, pos, width, sampleID, length, minOverlap, minContigLength, nrOfSamples)
+    .Call('_RealReadSim_evalCoverage', PACKAGE = 'RealReadSim', pos, width, sampleID, length, minOverlap, minContigLength, nrOfSamples)
 }
 
-getIdenticalSeqs <- function(starts1, ends1, starts2, ends2, minL = 0L) {
-    .Call(`_RealReadSim_getIdenticalSeqs`, starts1, ends1, starts2, ends2, minL)
+getIdenticalSeqs <- function(starts1, ends1, starts2, ends2, nm1, nm2, minL = 0L) {
+    .Call('_RealReadSim_getIdenticalSeqs', PACKAGE = 'RealReadSim', starts1, ends1, starts2, ends2, nm1, nm2, minL)
+}
+
+getIdenticalSeqsList <- function(names1, starts1, ends1, names2, starts2, ends2, minL = 0L) {
+    .Call('_RealReadSim_getIdenticalSeqsList', PACKAGE = 'RealReadSim', names1, starts1, ends1, names2, starts2, ends2, minL)
 }
 
 sequenceToFastaReads <- function(starts, sequence, meanWidth, newFasta, nameTag) {
-    .Call(`_RealReadSim_sequenceToFastaReads`, starts, sequence, meanWidth, newFasta, nameTag)
+    .Call('_RealReadSim_sequenceToFastaReads', PACKAGE = 'RealReadSim', starts, sequence, meanWidth, newFasta, nameTag)
 }
 
 calcMinOverlap <- function(seq, meanWidth) {
-    .Call(`_RealReadSim_calcMinOverlap`, seq, meanWidth)
+    .Call('_RealReadSim_calcMinOverlap', PACKAGE = 'RealReadSim', seq, meanWidth)
 }
 
 subSeqs <- function(seq, starts, ends) {
-    .Call(`_RealReadSim_subSeqs`, seq, starts, ends)
+    .Call('_RealReadSim_subSeqs', PACKAGE = 'RealReadSim', seq, starts, ends)
 }
 
 calcCovVec <- function(readsPerSample, lengths) {
-    .Call(`_RealReadSim_calcCovVec`, readsPerSample, lengths)
+    .Call('_RealReadSim_calcCovVec', PACKAGE = 'RealReadSim', readsPerSample, lengths)
 }
 

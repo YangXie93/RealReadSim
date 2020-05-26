@@ -79,10 +79,23 @@ std::vector<int> translateOverlap(int c1s,int c1e,int c2s,int c2e,int as1,int ae
 {
     return {(0+noNeg(as1-c1s))+noNeg(noPos((as1-c1s))-noPos((as2-c2s))),(ae1-c1s-noNeg(ae1-c1e))-noNeg(noPos((c1e-ae1))-noPos((c2e-ae2))),(0+noNeg(as2-c2s))+noNeg(noPos(as2-c2s)-noPos(as1-c1s)),(ae2-c2s-noNeg(ae2-c2e))-noNeg(noPos(c2e-ae2)-noPos(c1e-ae1))};;
 }
+// function to calculate the aproximate per sample read count for a given per sample read count vector
+//
+std::vector<int> partialReadNrVec(std::vector<int> *readNrVec, int length, int lengthPart){
+    double share = lengthPart/(double)length;
+    double rest = 1.0 -share;
+    std::vector<int> res;
+    std::vector<int>::iterator rnvIt;
+    for(rnvIt = readNrVec->begin();rnvIt != readNrVec->end();rnvIt++){
+        res.push_back((int) ((*rnvIt) * share));
+        *rnvIt = (int) ((*rnvIt) * rest);
+    }
+    return res;
+}
 
 // function that fuses two contigs. Residues are saved as individual contigs. start, end, sequence and coverage values are modified
 //
-void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2){
+void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2,std::vector<int>* trv1,std::vector<int>* trv2){
 
     std::vector<int> tmp;
     std::vector<int> tmp1;
@@ -93,12 +106,15 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
     std::list<std::vector<int> >* co;
     std::list<std::string>* se;
     std::vector<std::string>* nm;
+    std::list<std::vector<int> >* rv;
 
     int frontS;
     int frontE;
     std::string frontSeq;
     std::string frontNm;
     std::vector<int> frontCv;
+
+    int length;
 
     bool* save;
     bool hasFront = false;
@@ -112,8 +128,11 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
         st = &rS2;
         en = &rE2;
         nm = &rNm2;
+        rv = &rReadNrVec2;
 
         save = &save2;
+
+        length = tsq2->size();
     }
     else{
 
@@ -122,8 +141,11 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
         st = &rS1;
         en = &rE1;
         nm = &rNm1;
+        rv = &rReadNrVec2;
 
         save = &save1;
+
+        length = tsq1->size();
     }
 
     // preoverlap section
@@ -204,6 +226,7 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
                 en->push_back(frontE);
                 se->push_back(frontSeq);
                 nm->push_back(frontNm);
+                rv->push_back(partialReadNrVec(trv2,length,frontSeq.size()));
             }
             *tsq2 = (*tsq2).substr(stOv2+nrOv-1,(*tsq2).size()-(stOv2+nrOv));
             tmp1 = std::vector<int> (next((*tcov2).begin(),stOv2+nrOv),(*tcov2).end());
@@ -217,6 +240,7 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
                 *tsq2 = frontSeq;
                 *tnm2 = frontNm;
                 *tcov2 = frontCv;
+                partialReadNrVec(trv2,length,frontSeq.size());
             }
             countSave++;
         }
@@ -243,6 +267,7 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
                     *tsq2 = frontSeq;
                     *tnm2 = frontNm;
                     *tcov2 = frontCv;
+                    partialReadNrVec(trv2,length,frontSeq.size());
                 }
                 countSave++;
             }
@@ -253,6 +278,7 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,
                     en->push_back(frontE);
                     se->push_back(frontSeq);
                     nm->push_back(frontNm);
+                    rv->push_back(partialReadNrVec(trv2,length,frontSeq.size()));
                 }
                 *tsq2 = (*tsq2).substr(stOv2+nrOv-1,(*tsq2).size()-(stOv2+nrOv));
                 tmp1 = std::vector<int> (next((*tcov2).begin(),stOv2+nrOv),(*tcov2).end());
@@ -321,7 +347,7 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
         if(dist1 >= minDist || fuse)
         {
             swtch = true;
-            fuseCovs(siteLength,site[0],site[2],name2,dist2,ts1,te1,ts2,te2,tsq1,tsq2,tnm1,tnm2,tcov1,tcov2);
+            fuseCovs(siteLength,site[0],site[2],name2,dist2,ts1,te1,ts2,te2,tsq1,tsq2,tnm1,tnm2,tcov1,tcov2,trv1,trv2);
             fuseReadNrVecs(*trv1,*trv2);
             addToNm1 = true;
         }
@@ -332,7 +358,7 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
         if(dist2 >= minDist || fuse)
         {
             swtch = false;
-            fuseCovs(siteLength,site[2],site[0],name1,dist1,ts2,te2,ts1,te1,tsq2,tsq1,tnm2,tnm1,tcov2,tcov1);
+            fuseCovs(siteLength,site[2],site[0],name1,dist1,ts2,te2,ts1,te1,tsq2,tsq1,tnm2,tnm1,tcov2,tcov1,trv2,trv1);
             fuseReadNrVecs(*trv2,*trv1);
             addToNm2 = true;
         }
@@ -627,6 +653,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
             as2++;
             ae2++;
         }
+        Rcpp::Rcout << "1 " << rS1.size() << " " << rS2.size() << " " << rReadNrVec1.size() << " " << rReadNrVec2.size() << std::endl;//##########
     }
 
     // save contigs if they were still stored in the working variables
@@ -652,6 +679,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
         plusplus(&s2,&e2,&sq2,&nm2,&c2,&rnv2);
     }
 
+    Rcpp::Rcout << "2 " << rS1.size() << " " << rS2.size() << " " << rReadNrVec1.size() << " " << rReadNrVec2.size() << std::endl;//############
     // save all contigs that beginn after the last identical sequence
     //
     while(distance(s1, starts1.end()) > 0){
@@ -669,10 +697,12 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
             fuseSameGenCont(prev(rS2.end()),prev(rE2.end()),prev(rCv2.end()),prev(rSq2.end()),prev(rReadNrVec2.end()),*s2,*e2,*c2,*sq2,*rnv2);
         }
         else{
-            iSave(*s2,*e2,*sq2,*nm2,*c2,*rnv2);
+            jSave(*s2,*e2,*sq2,*nm2,*c2,*rnv2);
         }
         plusplus(&s2,&e2,&sq2,&nm2,&c2,&rnv2);
     }
+
+    Rcpp::Rcout << "3 " << rS1.size() << " " << rS2.size() << " " << rReadNrVec1.size() << " " << rReadNrVec2.size() << std::endl;//############
 
     return List::create(rS1,rS2,rE1,rE2,rSq2,rSq1,rCv1,rCv2,rNm1,rNm2,rReadNrVec1,rReadNrVec2);
 }
