@@ -5,7 +5,8 @@
 \title{realReadSim}
 \usage{
 realReadSim(
-  filenames_csv,
+  filenames_csv = "",
+  metagenomeDir = "~/RealReadSimDS",
   coverage = 0,
   takeAll = TRUE,
   nrOfSamples = 1,
@@ -17,8 +18,10 @@ realReadSim(
   repeatable = TRUE,
   seed = 0,
   minContigLength = 500,
-  minDist = 0.8,
-  minIdenticalLength = 2000
+  minDist = 0.99,
+  minIdenticalLength = 2000,
+  fileOutput = TRUE,
+  outputFile = "~/RRSOut"
 )
 }
 \arguments{

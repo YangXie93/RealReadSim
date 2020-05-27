@@ -29,6 +29,13 @@ realReadSim <- function(filenames_csv = "",metagenomeDir = "~/RealReadSimDS",cov
     if(substr(metagenomeDir,nchar(metagenomeDir),nchar(metagenomeDir)) == "/"){
         metagenomeDir = substr(metagenomeDir,1,nchar(metagenomeDir)-1)
     }
+    if(substr(metagenomeDir,1,1) == "~"){
+        metagenomeDir = paste0(Sys.getenv("HOME"),substr(metagenomeDir,2,nchar(metagenomeDir)))
+    }
+
+    if(substr(outputFile,1,1) == "~"){
+        outputFile = paste0(Sys.getenv("HOME"),substr(outputFile,2,nchar(outputFile)))
+    }
 
     starttime = Sys.time()
 
@@ -83,7 +90,7 @@ realReadSim <- function(filenames_csv = "",metagenomeDir = "~/RealReadSimDS",cov
         }
 
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,seqName = unlist(seqs),seq = unlist(sequ),rps = readsPerSample)
+    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,seqName = unlist(seqs),seq = unlist(sequ),rps = readsPerSample,stringsAsFactors = FALSE)
     print("co-assembly")################################################################################
 
     #----------------------------------- co-assembly ----------------------------------------------------
@@ -98,7 +105,10 @@ realReadSim <- function(filenames_csv = "",metagenomeDir = "~/RealReadSimDS",cov
     }
 
     if(fileOutput){
-        makeFastaOutput(res$seqNames,res$seqs,outputFile)
+        contNames = makeFastaOutput(res$seqName,res$seq,outputFile)
+        csvTable = res[,c("seq","coverage") := NULL]
+        csvTable[,("contNames") := contNames]
+        fwrite(csvTable,paste0(outputFile,".csv"))
     }
 
     print(Sys.time() -starttime)#################################################################
@@ -117,7 +127,7 @@ coAssembleRRSDS <- function(contigs,minDist,metagenomeDir){
         col1 = tmp[seq(1,length(tmp),2)]
         col2 = tmp[seq(2,length(tmp),2)]
 
-        table = data.table(name1 = col1,name2 = col2,name1IsIn = (col1 %in% involved),name2IsIn = (col2 %in% involved),path = paste0(RRSDS,"Crossmaps/",crossmaps))
+        table = data.table(name1 = col1,name2 = col2,name1IsIn = (col1 %in% involved),name2IsIn = (col2 %in% involved),path = paste0(metagenomeDir,"/Crossmaps/",crossmaps))
         table = subset(table,name1IsIn && name2IsIn)
 
         for(i in 1:length(table$name1)){
@@ -131,7 +141,6 @@ coAssembleRRSDS <- function(contigs,minDist,metagenomeDir){
 
             contigs = contigs[seqName != table$name1[i] && seqName != table$name2[i],]
             contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[2]]),end = c(contigs$end,newConts[[3]],newConts[[4]]),seq = c(contigs$seq,newConts[[5]],newConts[[6]]),coverage = c(contigs$coverage,newConts[[7]],newConts[[8]]),seqName= c(contigs$seqName,newConts[[9]],newConts[[10]]),rps = c(contigs$rps,newConts[[11]],newConts[[12]]))
-            print(contigs[c(1,2,5,6)])
         }
     }
     return(contigs)
@@ -397,81 +406,6 @@ is.inRRSDS <- function(name,metagenomeDir){
     }
     return(res)
 }
-
-# #-------------------------- Mapping the reads of the shorter genome against the refseq of the larger one ----------------------
-# crossMapRRSDS <- function(minL){
-#   RRSDS = "~/RealReadSimDS"
-#   table = readRDS(paste0(RRSDS,"/DSTable.Rds"))
-#
-#   query = which(table$isCrossmapped == FALSE && table$length > minL)
-#
-#   params = ScanBamParam(what = c("pos","qwidth","qname"),mapqFilter = 40)
-#
-#   jj = 1:length(table$name)
-#   ii = 0
-#   #------------------------------------------------------ going through the datasystem------------------------------------------
-#   for(p in query){
-#       jj = jj[-(p -ii)]
-#       print(p)
-#       for(j in jj){
-#         print(j)
-#         #---- choosing from which file to take the fasta and from which to take the reads and from which to take the seq --------
-#         if(table$length[j] > table$length[p]){ # take the reads from the smaller one and the seq of the bigger one
-#           from = table[j,]
-#           to = table[p,]
-#         }
-#         else{
-#           from = table[p,]
-#           to = table[j,]
-#         }
-#         readsToBe = readDNAStringSet(from$fasta)
-#
-#         #----------------------------------------------------------------------------------------------------------------
-#
-#         #---------------------------------------- preparing the reads ------------------------------------------------
-#         newFasta = paste0(from$dir,"/",from$name,"readsForMapX.fasta")
-#         readfile = dir(from$dir)
-#         if(length(readfile[grep(paste0(from$name,"readsForMapX.fasta"),readfile)]) == 0){
-#           readPos = seq(0,width(readsToBe)-1,round(from$meanWidth*0.5))
-#           sequenceToFastaReads(readPos,toString(readsToBe),from$meanWidth,newFasta,from$name)
-#         }
-#         # cutting all seqs of the smaller genome in peaces and writing these down as reads with name "seqName_positionOfCut"
-#         readInput = paste0("-f ",newFasta)
-#         #------------------------------ mapping the reads onto the other seq with bowtie2 -----------------------------------------------------------------
-#
-#         system(paste0("bowtie2-build --threads 3 ",to$fasta," ",to$dir,"/index"),ignore.stdout = TRUE)
-#         system(paste0("bowtie2 -p 3 --no-unal -x ",to$dir,"/index ",readInput," -S ",from$dir,"/out.sam"),ignore.stdout = TRUE)
-#
-#         system(paste0("samtools view -bS ",from$dir,"/out.sam > ",from$dir,"/out.bam"))
-#         #------------------------------- readiying and saving the read data -------------------------------------------
-#         mapped = scanBam(paste0(from$dir,"/out.bam"),param = params)
-#
-#         map = data.table(start1 = mapped[[1]]$pos,end1 = mapped[[1]]$pos + mapped[[1]]$qwidth -1,start2 = as.integer(gsub(".*_","",mapped[[1]]$qname)),end2 =as.integer(gsub(".*_","",mapped[[1]]$qname)) + mapped[[1]]$qwidth -1,key = "start1" )
-#
-#         if(length(map$start1) > 2){
-#           sameConts = getIdenticalSeqs(map$start1,map$end1,map$start2,map$end2,minL)
-#           if(length(sameConts[[1]]) > 0){
-#             conts1 = IRanges(start = sameConts[[2]],end = sameConts[[3]],names = sameConts[[1]])
-#             conts2 = IRanges(start = sameConts[[4]],end = sameConts[[5]],names = sameConts[[1]])
-#
-#             toSave = list(conts2,conts1)
-#             names(toSave) = c(from$name,to$name)
-#             saveRDS(toSave,paste0(RRSDS,"/Crossmaps/",from$name,"_X_",to$name,".Rds"))
-#           }
-#         }
-#         #-------------------------------- deleting everything that is of no further use ------------------------------------------
-#
-#         system(paste0("rm ",to$dir,"/*index*"))
-#         system(paste0("rm ",from$dir,"/out.sam"))
-#         system(paste0("rm ",from$dir,"/out.bam*"))
-#       }
-#       ii = ii +1
-#       table$isCrossmapped[p] = TRUE
-#   }
-#   saveRDS(table,paste0(Sys.getenv("HOME"),"/RealReadSimDS/DSTable.Rds"))
-# }
-
-
 
 #-------------------------- Mapping the reads of the shorter genome against the refseq of the larger one ----------------------
 crossMapRRSDS <- function(minL,metagenomeDir){

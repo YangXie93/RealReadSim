@@ -236,20 +236,28 @@ public:
 private:
     // the number of samples in the experiment
     int nrOfSamples;
+
     // minimal overlap requirement
     int minOverlap;
+
     // length of the genome sequence
     int length;
+
     // number of reads
     int nr;
+
     // int[] of coverage values
     int* cov;
+
     // start position of the reads
     int* readStarts;
+
     // end position of the reads
     int* readEnds;
+
     // sample identity of the reads
     int* sampleNr;
+
     // indicies of reads that have been sorted out by evalOverlap()
     std::vector<int> toSkip;
 };

@@ -603,7 +603,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
                 }
                 else{
                     if(addToNm1){
-                        tmpNm1 += "," +tmpNm2;
+                        tmpNm1 += ":" +tmpNm2;
                     }
                     iSave(tmpS1,tmpE1,tmpSq1,tmpNm1,tmpC1,tmpRV1);
                 }
@@ -629,7 +629,7 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
                 }
                 else{
                     if(addToNm2){
-                        tmpNm2 += "," +tmpNm1;
+                        tmpNm2 += ":" +tmpNm1;
                     }
                     jSave(tmpS2,tmpE2,tmpSq2,tmpNm2,tmpC2,tmpRV2);
                 }
@@ -653,7 +653,6 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
             as2++;
             ae2++;
         }
-        Rcpp::Rcout << "1 " << rS1.size() << " " << rS2.size() << " " << rReadNrVec1.size() << " " << rReadNrVec2.size() << std::endl;//##########
     }
 
     // save contigs if they were still stored in the working variables
@@ -679,7 +678,6 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
         plusplus(&s2,&e2,&sq2,&nm2,&c2,&rnv2);
     }
 
-    Rcpp::Rcout << "2 " << rS1.size() << " " << rS2.size() << " " << rReadNrVec1.size() << " " << rReadNrVec2.size() << std::endl;//############
     // save all contigs that beginn after the last identical sequence
     //
     while(distance(s1, starts1.end()) > 0){
@@ -702,7 +700,6 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
         plusplus(&s2,&e2,&sq2,&nm2,&c2,&rnv2);
     }
 
-    Rcpp::Rcout << "3 " << rS1.size() << " " << rS2.size() << " " << rReadNrVec1.size() << " " << rReadNrVec2.size() << std::endl;//############
 
     return List::create(rS1,rS2,rE1,rE2,rSq2,rSq1,rCv1,rCv2,rNm1,rNm2,rReadNrVec1,rReadNrVec2);
 }

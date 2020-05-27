@@ -60,9 +60,10 @@
 
 library(RealReadSim)
 #x = realReadSim("/home/yang/uni/BA-Projekt-Data/testBinning.txt",takeAll = TRUE,metagenomeDir = "~/testMetagenome")
+x = realReadSim(takeAll = TRUE,metagenomeDir = "~/testMetagenome",fileOutput = TRUE,outputFile = "~/out")
 
 #x = realReadSim("~/uni/BA-Projekt-Data/testRRS.txt",takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS")
-x = realReadSim(takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS")
+x = realReadSim(takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS",fileOutput = TRUE,outputFile = "~/out")
 # n = 0
 # for(i in 1:length(x$start)){
 #         if(x$end[i]-x$start[i]+1 != length(x$coverage[[i]])){

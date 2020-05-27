@@ -119,6 +119,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// makeFastaOutput
+std::vector<std::string> makeFastaOutput(std::vector<std::string>& names, std::vector<std::string>& seqs, std::string outFile);
+RcppExport SEXP _RealReadSim_makeFastaOutput(SEXP namesSEXP, SEXP seqsSEXP, SEXP outFileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type names(namesSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string>& >::type seqs(seqsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type outFile(outFileSEXP);
+    rcpp_result_gen = Rcpp::wrap(makeFastaOutput(names, seqs, outFile));
+    return rcpp_result_gen;
+END_RCPP
+}
 // sequenceToFastaReads
 bool sequenceToFastaReads(std::vector<std::vector<int> >& starts, std::vector<std::string>& sequence, int meanWidth, std::string& newFasta, std::vector<std::string>& nameTag);
 RcppExport SEXP _RealReadSim_sequenceToFastaReads(SEXP startsSEXP, SEXP sequenceSEXP, SEXP meanWidthSEXP, SEXP newFastaSEXP, SEXP nameTagSEXP) {
@@ -179,6 +192,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RealReadSim_evalCoverage", (DL_FUNC) &_RealReadSim_evalCoverage, 7},
     {"_RealReadSim_getIdenticalSeqs", (DL_FUNC) &_RealReadSim_getIdenticalSeqs, 7},
     {"_RealReadSim_getIdenticalSeqsList", (DL_FUNC) &_RealReadSim_getIdenticalSeqsList, 7},
+    {"_RealReadSim_makeFastaOutput", (DL_FUNC) &_RealReadSim_makeFastaOutput, 3},
     {"_RealReadSim_sequenceToFastaReads", (DL_FUNC) &_RealReadSim_sequenceToFastaReads, 5},
     {"_RealReadSim_calcMinOverlap", (DL_FUNC) &_RealReadSim_calcMinOverlap, 2},
     {"_RealReadSim_subSeqs", (DL_FUNC) &_RealReadSim_subSeqs, 3},
