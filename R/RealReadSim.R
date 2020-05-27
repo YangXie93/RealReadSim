@@ -18,7 +18,7 @@ assignInNamespace("cedta.override",
 #' @param seed A integer value used as seed when reapeatable = TRUE
 #' @export
 
-realReadSim <- function(filenames_csv = "",coverage = 0,takeAll = TRUE,nrOfSamples = 1,bowtieOptions = c("--no-unal","-p 3"),humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500,minDist = 0.99,minIdenticalLength = 2000,metagenomeDir = "~/RealReadSimDS"){
+realReadSim <- function(filenames_csv = "",metagenomeDir = "~/RealReadSimDS",coverage = 0,takeAll = TRUE,nrOfSamples = 1,bowtieOptions = c("--no-unal","-p 3"),humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500,minDist = 0.99,minIdenticalLength = 2000,fileOutput = TRUE,outputFile = "~/RRSOut"){
 
     library(Rsamtools)
     library(data.table)
@@ -35,34 +35,7 @@ realReadSim <- function(filenames_csv = "",coverage = 0,takeAll = TRUE,nrOfSampl
 
     covAt = 1
     if(filenames_csv != ""){
-        filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
-        params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)
-        seqNames = c()
-
-        for(i in 1:length(filenames[,1])){          # reading in the names of all sequences involved
-            if(readAsBams){                         # reading from bam files
-                tempNames = scanBamHeader(filenames[i,2])[[1]]$targets
-                seqNames[i] = names(tempNames[which.max(tempNames)])
-            }
-            else{                                   # reading from fasta files
-                seqData = readDNAStringSet(filenames[i,1])
-                seqNames[i] = gsub(" .*","",names(seqData))[which.max(width(seqData))]
-            }
-        }
-
-        #--------------------------- checking if already in Datasystem and if not adding to datasystem -------------
-
-        if(readAsBams){
-            addToDataSystem(seqNames,bam = filenames[,2],fasta = filenames[,1],minMapq = minMapq,bowtieOptions = bowtieOptions,minIdL = minIdenticalLength,metagenomeDir = metagenomeDir)
-        }
-        else{
-            if(length(filenames) > 2){
-                addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],fastq2 = filenames[,3],minMapq = minMapq,bowtieOptions =  bowtieOptions,minIdL = minIdenticalLength,metagenomeDir = metagenomeDir )
-            }
-            else{
-                addToDataSystem(seqNames,fasta = filenames[,1],fastq1 = filenames[,2],minMapq = minMapq,bowtieOptions =  bowtieOptions,minIdL = minIdenticalLength,metagenomeDir = metagenomeDir)
-            }
-        }
+        addToDataSystem(filenames_csv,minMapq,bowtieOptions,minIdenticalLength,readAsBams)
 
         #------------------------------------------------------------------------------------------------------------
     }
@@ -122,6 +95,10 @@ realReadSim <- function(filenames_csv = "",coverage = 0,takeAll = TRUE,nrOfSampl
     #---------------------------------------------------------------------------------------------------
     if(humanReadable){
         #makeHumanReadable(cov,res)
+    }
+
+    if(fileOutput){
+        makeFastaOutput(res$seqNames,res$seqs,outputFile)
     }
 
     print(Sys.time() -starttime)#################################################################
@@ -234,7 +211,7 @@ slidingWindowMaker <- function(vec){
 
 ######################################### insert genomes into the datasystem #########################################
 
-addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = character(0),fastq2 = character(0),minMapq,bowtieOptions = "--no-unal",minIdL,metagenomeDir){
+addToDataSystem <- function(filenames_csv,minMapq,bowtieOptions = "--no-unal",minIdL,metagenomeDir,readAsBams){
 
     #--------------------------------------- if not done already initialize datasystem -------------------------------
     initTable = FALSE
@@ -244,9 +221,44 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
         initTable = TRUE
     }
     #-----------------------------------------------------------------------------------------------------------
-    library(data.table)
 
-    params = ScanBamParam(what = c("pos","qwidth","rname"), mapqFilter = minMapq)
+    filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
+    params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)
+    seqNames = c()
+
+    for(i in 1:length(filenames[,1])){          # reading in the names of all sequences involved
+        if(readAsBams){                         # reading from bam files
+            tempNames = scanBamHeader(filenames[i,2])[[1]]$targets
+            seqNames[i] = names(tempNames[which.max(tempNames)])
+        }
+        else{                                   # reading from fasta files
+            seqData = readDNAStringSet(filenames[i,1])
+            seqNames[i] = gsub(" .*","",names(seqData))[which.max(width(seqData))]
+        }
+    }
+
+    #--------------------------- checking if inputfiles are bams or fastqs -------------
+
+    if(readAsBams){
+        bams = filenames[,2]
+        fasta = filenames[,1]
+        fastq1 = character(0)
+        fastq2 = character(0)
+    }
+    else{
+        if(length(filenames) > 2){
+            fasta = filenames[,1]
+            fastq1 = filenames[,2]
+            fastq2 = filenames[,3]
+            bams = character(0)
+        }
+        else{
+            fasta = filenames[,1]
+            fastq1 = filenames[,2]
+            fastq2 = character(0)
+            bams = character(0)
+        }
+    }
 
     lngth = c()
     seqFastas = c()
@@ -268,47 +280,27 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
             #---------------------------- if not bams -> make bams | else use bams ------------------------------------
 
             if(length(bams) == 0){
-                system(paste0("bowtie2-build ",fasta[i]," ",metagenomeDir,"/index"),ignore.stdout = TRUE)
-
-                if(length(fastq2) == 0){
-                    system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -U ",fastq1[i]," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
-                }
-                else{
-                    system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -1 ",fastq1[i],"-2 ",fastq2[i]," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
-                }
-
-                #asBam("~/RealReadSimDS/out.sam","~/RealReadSimDS/out")
-                system(paste0("samtools view -bS ",metagenomeDir,"/out.sam > ",metagenomeDir,"/out.bam"))
-                system(paste0("rm ",metagenomeDir,"/out.sam"))
-                bam = paste0(metagenomeDir,"/out.bam")
+                execBowtie2(fasta[i],fastq1[i],fastq2[i],bowtieOptions,metagenomeDir)
                 hasOut = TRUE
             }
             else{
                 bam = bams[i]
             }
 
-            #-----------------------------------------------------------------------------------------------------------
-
             seqs = scanBamHeader(bam)[[1]]$targets
             DS = dir(metagenomeDir)
-
             reads = scanBam(bam,param =  params)
+
             if(length(reads[[1]]$pos) > 0){
-                reads = data.table(pos = reads[[1]]$pos,width = reads[[1]]$qwidth,seq = reads[[1]]$rname,key = c("seq","pos"))
-                #system(paste("rm",bam))         users choice?
 
                 this = paste0(metagenomeDir,"/",seqNames[i])
-
                 dir.create(this)
+                reads = data.table(pos = reads[[1]]$pos,width = reads[[1]]$qwidth,seq = reads[[1]]$rname,key = c("seq","pos"))
+                saveRDS(reads,paste0(this,"/",names(seqs[which.max(seqs)]),".Rds"))
 
-                dataPath = paste0(this,"/",names(seqs[which.max(seqs)]),".Rds")
-                saveRDS(reads,dataPath)
-
-                new.name.fasta = strsplit(fasta[i],"/")
-                new.name.fasta = new.name.fasta[[1]][length(new.name.fasta[[1]])]
+                new.name.fasta = strsplit(fasta[i],"/")[[1]][length(new.name.fasta[[1]])]
                 system(paste0("cp ",fasta[i]," ",this))
                 file.rename(paste0(this,"/",new.name.fasta),paste0(this,"/bin.fasta"))
-
                 if(length(seqs) > 1){
                     sep.fastas(fasta[i],this)
                 }
@@ -317,14 +309,11 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
                     file.rename(paste0(this,"/",new.name.fasta),paste0(this,"/",names(seqs[1]),".fasta"))
                 }
 
-                length = 0
                 meanWidth = mean(reads$width)
                 sequences = seqinr::read.fasta(fasta[i],as.string = TRUE)
                 names(sequences) = gsub(" .*","",names(sequences))
-
                 readPos = list()
                 readsToBe = c()
-
                 for(j in 1:length(seqs)){
                     seqLngths[n] = unname(seqs[j])
                     seqNms[n] = names(seqs[j])
@@ -343,6 +332,7 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
 
                     n = n +1
                 }
+
                 if(substr(this,1,1) == "~"){
                     this = paste0(Sys.getenv("HOME"),substr(this,2,nchar(this)))
                 }
@@ -375,6 +365,19 @@ addToDataSystem <- function(seqNames,bams = character(0),fasta,fastq1 = characte
 
 }
 
+execBowtie2 <- function(fasta,fastq1,fastq2,bowtieOptions,metagenomeDir){
+
+    system(paste0("bowtie2-build ",fasta," ",metagenomeDir,"/index"),ignore.stdout = TRUE)
+    if(is.null(fastq2)){
+        system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -U ",fastq1," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
+    }
+    else{
+        system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -1 ",fastq1,"-2 ",fastq2," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
+    }
+    system(paste0("samtools view -bS ",metagenomeDir,"/out.sam > ",metagenomeDir,"/out.bam"))
+    system(paste0("rm ",metagenomeDir,"/out.sam"))
+    bam = paste0(metagenomeDir,"/out.bam")
+}
 
 sep.fastas <- function(fasta,dir){
     seqs = readDNAStringSet(fasta)

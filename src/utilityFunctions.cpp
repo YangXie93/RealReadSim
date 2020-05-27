@@ -11,9 +11,27 @@
 //[[Rcpp::plugins(cpp14)]]
 
 //[[Rcpp::export]]
-void makeFastaOutput(std::vector<std::sring> &names,std::vector<std::string> &seqs){
+void makeFastaOutput(std::vector<std::string> &names,std::vector<std::string> &seqs,std::string outFile){
 
+    std::ofstream out;
+    out.open((outFile+".fasta"),std::ios_base::app);
+    if(out.is_open()){
+        std::vector<std::string>::iterator nm;
+        std::vector<std::string>::iterator sq = seqs.begin();
+        int i = 1;
 
+        for(nm = names.begin();nm != names.end();nm++){
+            out << *nm << "."<< i << "\n";
+            out << *sq << "\n";
+            sq++;
+            i++;
+            if(*prev(nm) != *nm){
+                i = 1;
+            }
+        }
+
+    }
+    out.close();
 
 }
 
