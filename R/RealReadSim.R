@@ -2,86 +2,176 @@ assignInNamespace("cedta.override",
                   c(data.table:::cedta.override,"RealReadSim"),
                   "data.table")
 
+require(data.table)
+
 #' realReadSim
 #' @description This function simulates metagenomic data using real experimental reads
 #'
-#' @param filenames_csv This parameter takes the name of a file in which the names of the fasta files and the name of the bam or fastq files and or the bowtie prebuild name are contained
-#' @param coverage A integer vector containing the wished coverages of the individual genomes
-#' @param prebuild A boolean value that determines wether the prebuild function is to be used
-#' @param bowtieDefaultOptions A boolean value determening wether the set bowtie2 options schould be used or user defined options
-#' @param humanReadable A boolean value determening wether there will be graphical output or not
-#' @param asTempoaryDatabase A boolean value determening wether the data will be read in all at once or one by one
-#' @param readAsBams A boolean value determening wether filenames_csv should be read as containing bam file names or not
-#' @param minMapq A integer value stating the minimal mapq score of reads to use
-#' @param redraw A boolean value determening, if the asked for coverage is to much for the data set, reads from the same data set should be drawn again
-#' @param repeatable A boolean value determening wether a seed will be set
-#' @param seed A integer value used as seed when reapeatable = TRUE
+#' @param filenames_csv A character vector specifying the files containing the paths pointing to the fasta files and bam/fastq files of the input.
+#' @param metagenomeDir A String specifying which metagenome datasystem to use, or where to build one if filenames_csv is given.
+#' @param genomesByName A character vector containing the names of genomes to be used from metagenomeDir for this simulation.
+#' @param coverage A list of integer vectors. Each element of the vectors contains a coverage value for one sample that is to be simulated. If the list is shorter than the number of genomes that have been selected for the simulation, the last vector will be used for the rest of the genomes.
+#' @param nrOfSamples The number of samples to be generated. (this can be ignored when multiple bam/fastq files are given for each genome).
+#' @param humanReadable A boolean value determening wether there will be graphical output or not.
+#' @param bowtieOptions A character vector containing the bowtie2 options for building a datasystem.
+#' @param bowtieBuildOptions A character vector containing the bowtie2-build options for building a datasystem.
+#' @param readAsBams A boolean value determening wether filenames_csv should be read as containing bam file names or fastq.
+#' @param minMapq A integer value stating the minimal mapq score of the reads to use for this simulation.
+#' @param redraw A boolean value determening, if the asked for coverage is to much for the data set, reads from the same data set should be drawn again.
+#' @param repeatable A boolean value determening wether a seed will be set.
+#' @param seed A integer value used as seed when reapeatable = TRUE.
+#' @param minContigLength The minimum length a simulated contig must have to be included in the results.
+#' @param minDist The minimum mean share a contigs coverage has to make up of a chimeric contig, so that the chimeric contig will be generated.
+#' @param minIdenticalLength The minimum length of a sequence that is identical on two genomes to be considered.
+#' @param outputFile A String giving the path to and first part of the names of the output files.
+#' @param allSamplesToOneColInOut A boolean value determening wether to have the coverage vectors of the simulated contigs in individual columns in the output file or in one column.
+#'
+#' @return A data.table containing the simulated contigs, with the columns start (the first positoin of the contig on the sequence its reads come from), end (the last position of the contig on the sequence its reads come from), coverage (a vector containing the coverage for each position on the contig), seq (the DNA sequence of the vector), covVec (a vector containing the mean coverage to every sample),length (A integer stating the length of the contig), contName (a specific name for the contig).
+#' If a contigs name and the corresponding seqName are made up of multiple sequence names it means that the contig is chimeric and made up of the sequences mentioned in the name.
 #' @export
 
-realReadSim <- function(filenames_csv = "",metagenomeDir = "~/RealReadSimDS",coverage = 0,takeAll = TRUE,nrOfSamples = 1,bowtieOptions = c("--no-unal","-p 3"),humanReadable = FALSE,readAsBams = TRUE, minMapq = 40, redraw = FALSE, repeatable = TRUE,seed = 0,minContigLength = 500,minDist = 0.99,minIdenticalLength = 2000,fileOutput = TRUE,outputFile = "~/RRSOut"){
+realReadSim <- function(filenames_csv = character(0) , metagenomeDir , genomesByName = character(0) , coverage = list(),
+                        nrOfSamples = 1 , bowtieOptions = c("--no-unal","-p 3") , bowtieBuildOptions = c("--threads 3"),
+                        humanReadable = FALSE , readAsBams = TRUE , minMapq = 40 , redraw = FALSE , repeatable = TRUE , seed = 1,
+                        minContigLength = 500 , minDist = 0.0 , minIdenticalLength = 2000 , fileOutput = TRUE , outputFile = "~/RRSOut",
+                        allSamplesToOneColInOut = TRUE){
 
-    library(Rsamtools)
-    library(data.table)
-    library(seqinr)
-
-    require(data.table)
+    library("Rsamtools")
+    library("data.table")
+    library("seqinr")
+    library("pryr")
+    library("stringr")
 
     if(substr(metagenomeDir,nchar(metagenomeDir),nchar(metagenomeDir)) == "/"){
+
         metagenomeDir = substr(metagenomeDir,1,nchar(metagenomeDir)-1)
+
     }
     if(substr(metagenomeDir,1,1) == "~"){
+
         metagenomeDir = paste0(Sys.getenv("HOME"),substr(metagenomeDir,2,nchar(metagenomeDir)))
+
     }
 
     if(substr(outputFile,1,1) == "~"){
+
         outputFile = paste0(Sys.getenv("HOME"),substr(outputFile,2,nchar(outputFile)))
+
     }
 
-    starttime = Sys.time()
 
 
-    covAt = 1
-    if(filenames_csv != ""){
-        addToDataSystem(filenames_csv,minMapq,bowtieOptions,minIdenticalLength,readAsBams)
 
-        #------------------------------------------------------------------------------------------------------------
+
+    starttime = Sys.time()############################################
+
+
+    inputFileNr = length(filenames_csv)
+
+    if(inputFileNr > 0){
+        addToDataSystem(filenames_csv,bowtieOptions,minIdenticalLength,metagenomeDir,readAsBams,bowtiebuildOptions = bowtieBuildOptions)
     }
+
+    if(inputFileNr > 1){
+        nrOfSamples = length(filenames_csv)
+    }
+
     catalogue = readRDS(paste0(metagenomeDir,"/DSTable.Rds"))
 
+    if(length(genomesByName) > 0){
+        catalogue = catalogue[name %in% genomesByName] # to be tested
+    }
+
+    if(inputFileNr == 0){
+        if( max(catalogue[,length(unlist(data)),"fasta"]$V1) > 1 ){
+            nrOfSamples = max(catalogue[,length(unlist(data)),"fasta"]$V1)
+        }
+    }
+
+    print("Time: addToDataSystem: ")
+    print(Sys.time() - starttime)##############################################
+
     #-------------------------------- assembly --------------------------------------------------------
-    RRSDS = metagenomeDir
+
+    res = rrsAssembly(catalogue,coverage,repeatable,redraw,seed,nrOfSamples,minMapq,minContigLength)
+
+    print("co-assembly")################################################################################
+    #----------------------------------- co-assembly ----------------------------------------------------
+    res = coAssembleRRSDS(res,minDist,metagenomeDir)
+    res[, ("length") := ((end-start)+1)]
+    res = res[length >= minContigLength]
+    res[,("covVec") := calcCovVec(res$rps,res$length)]
+    #---------------------------------------------------------------------------------------------------
+    if(humanReadable){
+
+    }
+
+    if(fileOutput){
+        makeFileOutput(outputFile,res,nrOfSamples,allSamplesToOneColInOut )
+    }
+
+    print(Sys.time() -starttime)#################################################################
+    return(res)
+}
+
+rrsAssembly <- function(catalogue,coverage,repeatable,redraw,seed,nrOfSamples,minMapq,minContigLength){
 
     starts = list()
     ends = list()
     readsPerSample = list()
-    sdCov = list()
     seqs = list()
     cov = list()
     sequ = list()
     DS = unique(catalogue$dir)
 
+    useCov = TRUE
+    if(length(coverage) == 0){
+        useCov = FALSE
+    }
+
     n = 1
+    covAt = 1
     for(i in 1:length(DS)){
+        print(paste0(i," of: ",length(DS)," gen: ",DS[i]))################################################
 
-        partialCatalogue = subset(catalogue,dir == DS[i])
-        fullData = readRDS(partialCatalogue$data[1])
-        fullData = randomReads(fullData,partialCatalogue$totalLength[1],coverage = coverage[covAt,],meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw,nrOfSamples,takeAll)
-        for(j in 1:length(partialCatalogue$name)){
+        partialCatalogue = catalogue[dir == DS[i]]
 
-            data = subset(fullData,seq == partialCatalogue$name[j])
-            if(length(data$pos) > 0){
-                print(paste(length(data$pos)," reads have been selected"))###########################################
-                contigs = evalCoverage(data$pos, data$width,data$sampleNr, partialCatalogue$len[j],partialCatalogue$minOverlap[j],minContigLength,nrOfSamples)
-                if(length(contigs[[1]]) > 0){
-                    fst = readDNAStringSet(partialCatalogue$fasta[j])
-                    starts[[n]] = contigs[[1]]
-                    ends[[n]] = contigs[[2]]
-                    sequ[[n]] = subSeqs(toString(fst),starts[[n]],ends[[n]])
-                    cov = append(cov,contigs[[3]])
-                    readsPerSample = append(readsPerSample, contigs[[4]])
-                    seqs[[n]] = rep(partialCatalogue$name[j],length(contigs[[1]]))
-                    n = n+1
+        if(useCov){
+            thisCov = coverage[[covAt]]
+        }
+        else{
+            thisCov = integer(0)
+        }
+
+        fullData = randomReads(partialCatalogue$data[[1]],partialCatalogue$totalLength[1],coverage = thisCov,
+                               meanWidht = partialCatalogue$meanWidth[1],repeatable,seed,redraw,nrOfSamples,useCov,minMapq)
+
+        if(length(fullData) > 0){
+
+            for(j in 1:length(partialCatalogue$name)){
+
+                data = fullData[seq == partialCatalogue$name[j],]
+
+                if(length(data$pos) > 0){
+
+                    print(paste(length(data$pos)," reads have been selected"))###########################################
+                    contigs = evalCoverage(data$pos, data$width,data$sampleNr, partialCatalogue$len[j],partialCatalogue$minOverlap[j],
+                                           minContigLength,nrOfSamples)
+
+                    if(length(contigs[[1]]) > 0){
+
+                        fst = readDNAStringSet(partialCatalogue$fasta[j])
+                        starts[[n]] = contigs[[1]]
+                        ends[[n]] = contigs[[2]]
+                        sequ[[n]] = subSeqs(toString(fst),starts[[n]],ends[[n]])
+                        cov = append(cov,contigs[[3]])
+                        readsPerSample = append(readsPerSample, contigs[[4]])
+                        seqs[[n]] = rep(partialCatalogue$name[j],length(contigs[[1]]))
+                        n = n+1
+
+                    }
                 }
+
             }
 
         }
@@ -90,183 +180,257 @@ realReadSim <- function(filenames_csv = "",metagenomeDir = "~/RealReadSimDS",cov
         }
 
     }
-    temp = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,seqName = unlist(seqs),seq = unlist(sequ),rps = readsPerSample,stringsAsFactors = FALSE)
-    print("co-assembly")################################################################################
-
-    #----------------------------------- co-assembly ----------------------------------------------------
-
-    res = coAssembleRRSDS(temp,minDist,metagenomeDir)
-    res$length = (res$end-res$start)+1
-    res = subset(res,length >= minContigLength)
-    res$covVec = calcCovVec(res$rps,res$length)
-    #---------------------------------------------------------------------------------------------------
-    if(humanReadable){
-        #makeHumanReadable(cov,res)
-    }
-
-    if(fileOutput){
-        contNames = makeFastaOutput(res$seqName,res$seq,outputFile)
-        csvTable = res[,c("seq","coverage") := NULL]
-        csvTable[,("contNames") := contNames]
-        fwrite(csvTable,paste0(outputFile,".csv"))
-    }
-
-    print(Sys.time() -starttime)#################################################################
+    res = data.table(start = unlist(starts),end = unlist(ends),coverage = cov,seqName = unlist(seqs),seq = unlist(sequ),
+                     rps = readsPerSample,stringsAsFactors = FALSE)
     return(res)
 }
+
 
 # function to simulate coassembly using coAssembly.cpp
 #
 coAssembleRRSDS <- function(contigs,minDist,metagenomeDir){
 
-    involved = unique(contigs$seqName)
-
     crossmaps = dir(paste0(metagenomeDir,"/Crossmaps"))
+
     if(length(crossmaps) != 0){
+
+        involved = unique(contigs$seqName)
+
         tmp = unlist(strsplit(crossmaps,"_X_|.Rds"))
         col1 = tmp[seq(1,length(tmp),2)]
         col2 = tmp[seq(2,length(tmp),2)]
 
-        table = data.table(name1 = col1,name2 = col2,name1IsIn = (col1 %in% involved),name2IsIn = (col2 %in% involved),path = paste0(metagenomeDir,"/Crossmaps/",crossmaps))
-        table = subset(table,name1IsIn && name2IsIn)
+        table = data.table(name1 = col1,name2 = col2,name1IsIn = (col1 %in% involved),
+                           name2IsIn = (col2 %in% involved),path = paste0(metagenomeDir,"/Crossmaps/",crossmaps))
 
-        for(i in 1:length(table$name1)){
-            same = readRDS(table$path[i])
-            same1 = same[table$name1[i]][[1]]
-            same2 = same[table$name2[i]][[1]]
-            conts1 = subset(contigs,seqName == table$name1[i])
-            conts2 = subset(contigs,seqName == table$name2[i])
+        table = table[name1IsIn == TRUE]
+        table = table[name2IsIn == TRUE]
 
-            newConts = mkChimeras(conts1$start,conts1$end,conts1$coverage,conts2$start,conts2$end,conts2$coverage,start(same1),end(same1),start(same2),end(same2),conts1$seq,conts2$seq,conts1$seqName,conts2$seqName,conts1$rps,conts2$rps,minDist)
+        if(length(table$name1) > 0){
 
-            contigs = contigs[seqName != table$name1[i] && seqName != table$name2[i],]
-            contigs = data.table(start = c(contigs$start,newConts[[1]],newConts[[2]]),end = c(contigs$end,newConts[[3]],newConts[[4]]),seq = c(contigs$seq,newConts[[5]],newConts[[6]]),coverage = c(contigs$coverage,newConts[[7]],newConts[[8]]),seqName= c(contigs$seqName,newConts[[9]],newConts[[10]]),rps = c(contigs$rps,newConts[[11]],newConts[[12]]))
+            starts = list()
+            ends = list()
+            covs = list()
+            seqs = list()
+            rps = list()
+            nms = list()
+
+            for(i in 1:length(involved)){
+
+                tmp = contigs[seqName == involved[i]]
+                starts[[i]] = tmp$start
+                ends[[i]] = tmp$end
+                covs[[i]] = tmp$coverage
+                seqs[[i]] = tmp$seq
+                rps[[i]] = tmp$rps
+                nms[[i]] = tmp$seqName
+
+            }
+
+            names(starts) = involved
+            names(ends) = involved
+            names(covs) = involved
+            names(seqs) = involved
+            names(rps) = involved
+            names(nms) = involved
+
+            rm(contigs)
+            for(i in 1:length(table$name1)){
+
+                print(paste0(i," of ",length(table$name1)," names: ",table$name1[i]," : ",table$name2[i]))######################
+
+                same = readRDS(table$path[i])
+
+                same1 = same[table$name1[i]][[1]]
+                same2 = same[table$name2[i]][[1]]
+
+                if(length(starts[table$name1[i]][[1]] ) > 0 && length(starts[table$name2[i]][[1]]) > 0 ){
+
+                    newConts = mkChimeras(starts[table$name1[i]][[1]],ends[table$name1[i]][[1]],covs[table$name1[i]][[1]],
+                               starts[table$name2[i]][[1]],ends[table$name2[i]][[1]],covs[table$name2[i]][[1]],
+                               start(same1),end(same1),start(same2),end(same2),
+                               seqs[table$name1[i]][[1]],seqs[table$name2[i]][[1]]
+                               ,nms[table$name1[i]][[1]],nms[table$name2[i]][[1]],
+                               rps[table$name1[i]][[1]],rps[table$name2[i]][[1]],
+                               minDist)
+
+
+                    starts[table$name1[i]][[1]] = newConts[[1]]
+                    starts[table$name2[i]][[1]] = newConts[[2]]
+                    ends[table$name1[i]][[1]] = newConts[[3]]
+                    ends[table$name2[i]][[1]] = newConts[[4]]
+                    seqs[table$name1[i]][[1]] = newConts[[5]]
+                    seqs[table$name2[i]][[1]] = newConts[[6]]
+                    covs[table$name1[i]][[1]] = newConts[[7]]
+                    covs[table$name2[i]][[1]] = newConts[[8]]
+                    nms[table$name1[i]][[1]] = newConts[[9]]
+                    nms[table$name2[i]][[1]] = newConts[[10]]
+                    rps[table$name1[i]][[1]] = newConts[[11]]
+                    rps[table$name2[i]][[1]] = newConts[[12]]
+
+                }
+
+            }
+
+            contigs = data.table(start = unlist(starts),end = unlist(ends),
+                                 coverage = unlist(covs,recursive = FALSE),
+                                 seqName = unlist(nms),seq = unlist(seqs),
+                                 rps = unlist(rps,recursive = FALSE),
+                                 stringsAsFactors = FALSE)
+
         }
     }
     return(contigs)
 }
 
+# write a Fasta and a csv file from the result data.table
 #
-makeHumanReadable <- function(cov,res){
-    par(mfrow = c(2,1))
-    x = seq(1,length(res),by = 3)
-    for(i in 1:length(cov)){
-        cov[[i]] = slidingWindowMaker(cov[[i]])
-        pdf(paste(names(res[[x[i]]][1]),".pdf",sep = ""))
-        plot.default(x = cov[[i]],y = c(1:length(cov[[i]])),type = "l",xlab = "Coverage",ylab = "Position")
-        hist(width(res[[x[i]]]),border = "black",col = "red",breaks = 50,xlab = "Contig Länge",main = "Contig Längenhistogramm")
-        abline(v = res[[x[i] +2]],col = "blue")
-        dev.off()
+makeFileOutput <- function(outputFile,contigs,sampleNr,allSamplesToOneColInOut){
+
+    contNames = makeFastaOutput(contigs$seqName,contigs$seq,outputFile)
+    csvTable = contigs[,c("seq","coverage","rps") := NULL]
+    csvTable[,("contNames") := contNames]
+    if(!allSamplesToOneColInOut){
+        covVecs = unlist(csvTable$covVec)
+
+        for(i in 1:sampleNr){
+            csvTable[,(paste0("sample_",i)) := covVecs[seq(i,length(covVecs),sampleNr)]]
+        }
+        csvTable[,("covVec") := NULL]
     }
-    par(mfrow = c(1,1))
+    fwrite(csvTable,paste0(outputFile,".csv"))
+
 }
 
 # function to draw reads the necessary reads randomly
 #
-randomReads <- function(data,seqLength,coverage,meanWidht,repeatable,seed,redraw,sampleNr = 1,takeAll){
+randomReads <- function(dataPaths,seqLength,coverage,meanWidht,repeatable,seed,redraw,sampleNr = 1,useCov,minMapq){
 
+    if(length(dataPaths) > 1){
+        sampleNr = length(dataPaths)
+    }
 
-    whch = c()
-    sampleNrs = c()
+    whch = list()
+    sampleNrs = list()
+    pos = list()
+    width = list()
+    seq = list()
+
     for(i in 1:sampleNr){
-        if(!takeAll){
-            numberOfReads = as.integer((sum(seqLength) *coverage[i])/meanWidht)
-        }
-        else{
-            numberOfReads = length(data$pos)
-        }
-        if(repeatable){
-            set.seed(seed)
-        }
-        if(numberOfReads > length(data$pos) && !redraw){
-            whch =c(whch,1:length(data$pos))
-            sampleNrs = c(sampleNrs,rep(i,length(data$pos)))
-        }
-        else{
-            whch = c(whch,sample(1:length(data$pos),numberOfReads,replace = redraw))
-            sampleNrs = c(sampleNrs,rep(i,numberOfReads))
-        }
-    }
-    names(whch) = sampleNrs
-    whch = sort(whch)
-    res = data[whch,]
-    res = cbind(res, sampleNr = as.integer(names(whch)))
-    return(res)
-}
+        if(i == 1 || length(dataPaths) > 1){
 
+            data = readRDS(dataPaths[i])
+            data = data[mapq >= minMapq]
 
-slidingWindowMaker <- function(vec){
-    res = c()
-    size = 1
-    n = 1
-    while(size <=  length(vec)/10000 ){
-        size = size *10
-    }
-    if(size > 1){
-        for(i in seq(1,length(vec),by = size/2)){
-            if(i + size -1 > length(vec)){
-                x = length(vec)
+        }
+        if(length(data$pos) > 0){
+            if(useCov){
+
+                numberOfReads = as.integer((sum(seqLength) *coverage[i])/meanWidht)
+
             }
             else{
-                x = (i +size -1)
+
+                numberOfReads = length(data$pos)
+
             }
-            res[n] = mean(vec[i:x ])
-            n = n +1
+            if(repeatable){
+
+                set.seed(seed+i)
+
+            }
+            if(numberOfReads >= length(data$pos) && !redraw){
+
+                whch[[i]] = 1:length(data$pos)
+                sampleNrs[[i]] = rep(i,length(data$pos))
+
+            }
+            else{
+
+                whch[[i]] = sample(1:length(data$pos),numberOfReads,replace = redraw)
+                sampleNrs[[i]] = rep(i,numberOfReads)
+
+            }
+
+            pos[[i]] = data$pos[ whch[[i]] ]
+            width[[i]] = data$width[ whch[[i]] ]
+            seq[[i]] = data$seq[ whch[[i]] ]
+
+            print(paste(length(pos),length(width),length(seq),length(sampleNrs)))##########################
         }
+    }
+    if(length(pos) > 0){
+        res = data.table(pos = unlist(pos),width = unlist(width),seq = unlist(seq),sampleNr = unlist(sampleNrs),key = "pos")
+    }
+    else{
+        res = c()
     }
     return(res)
 }
+
 
 
 ######################################### insert genomes into the datasystem #########################################
 
-addToDataSystem <- function(filenames_csv,minMapq,bowtieOptions = "--no-unal",minIdL,metagenomeDir,readAsBams){
+#' addToDataSystem
+#' @description This function sets up the datasystems for realReadSim
+#'
+#' @param filenames_csv A character vector specifying the files containing the paths pointing to the fasta files and bam/fastq files of the input.
+#' @param bowtieOptions A character vector containing the bowtie2 options for building a datasystem.
+#' @param minIdL The minimum length of a sequence that is identical on two genomes to be considered.
+#' @param metagenomeDir A String specifying which metagenome datasystem to use, or where to build one if filenames_csv is given.
+#' @param readAsBams A boolean value determening wether filenames_csv should be read as containing bam file names or fastq.
+#' @param bowtiebuildOptions A character vector containing the bowtie2-build options for building a datasystem.
+#'
+#' @return This function has no return value
+
+addToDataSystem <- function(filenames_csv,bowtieOptions = "--no-unal",minIdL,metagenomeDir,readAsBams,bowtiebuildOptions){
+
+    if(substr(metagenomeDir,1,1) == "~"){
+
+        metagenomeDir = paste0(Sys.getenv("HOME"),substr(metagenomeDir,2,nchar(metagenomeDir)))
+
+    }
 
     #--------------------------------------- if not done already initialize datasystem -------------------------------
     initTable = FALSE
     if(!dir.exists(metagenomeDir)){
+
         dir.create(metagenomeDir)
         dir.create(paste0(metagenomeDir,"/Crossmaps"))
         initTable = TRUE
-    }
-    #-----------------------------------------------------------------------------------------------------------
 
-    filenames = read.table(filenames_csv,header = TRUE,sep = ",",stringsAsFactors = FALSE)
-    params = ScanBamParam(what = c("pos","qwidth","rname"),mapqFilter = minMapq)
-    seqNames = c()
-
-    for(i in 1:length(filenames[,1])){          # reading in the names of all sequences involved
-        if(readAsBams){                         # reading from bam files
-            tempNames = scanBamHeader(filenames[i,2])[[1]]$targets
-            seqNames[i] = names(tempNames[which.max(tempNames)])
-        }
-        else{                                   # reading from fasta files
-            seqData = readDNAStringSet(filenames[i,1])
-            seqNames[i] = gsub(" .*","",names(seqData))[which.max(width(seqData))]
-        }
-    }
-
-    #--------------------------- checking if inputfiles are bams or fastqs -------------
-
-    if(readAsBams){
-        bams = filenames[,2]
-        fasta = filenames[,1]
-        fastq1 = character(0)
-        fastq2 = character(0)
     }
     else{
-        if(length(filenames) > 2){
-            fasta = filenames[,1]
-            fastq1 = filenames[,2]
-            fastq2 = filenames[,3]
-            bams = character(0)
+        tmpdir = dir(metagenomeDir)
+        if( !("DSTable.Rds" %in% tmpdir) ){
+            initTable = TRUE
         }
-        else{
-            fasta = filenames[,1]
-            fastq1 = filenames[,2]
-            fastq2 = character(0)
-            bams = character(0)
+    }
+    #------------------------ read in files ----------------------------------
+
+    filenames = fread(filenames_csv[1])
+
+    if(length(filenames_csv) > 1){
+
+        for(i in 2:length(filenames_csv)){
+
+            tmpFilenames = fread(filenames_csv[i])
+            filenames = rbind(filenames,tmpFilenames)
+
         }
+    }
+    if(readAsBams){
+
+        names(filenames) = c("fasta","bam")
+        filenames = filenames[,.(bam = list(bam)),"fasta"]
+
+    }
+    else{
+
+        names(filenames) = c("fasta","fastq1","fastq2")
+        filenames = filenames[,.(fastq1 = list(fastq1),fastq2 = list(fastq2)),"fasta"]
+
     }
 
     lngth = c()
@@ -275,134 +439,268 @@ addToDataSystem <- function(filenames_csv,minMapq,bowtieOptions = "--no-unal",mi
     seqLngths = c()
     seqMnWdths = c()
     seqDir = c()
-    seqData = c()
+    seqData = list()
     seqMinOv = c()
     n = 1
     hasNew = FALSE
 
-    for(i in 1:length(fasta)){#------------------------- for all genomes --------------------------------------
+    for(i in 1:length(filenames$fasta)){#------------------------- for all genomes --------------------------------------
+
         print(paste0("genome nr: ",i))
-        if(!is.inRRSDS(seqNames[i],metagenomeDir)){
-            hasOut = FALSE                    # mark wether there is output to be removed later
+        dirNm = basename(gsub(".fasta|.fna|.fa","",filenames$fasta[i]))
+        if(!is.inRRSDS(dirNm,metagenomeDir)){
+
             hasNew = TRUE
 
-            #---------------------------- if not bams -> make bams | else use bams ------------------------------------
+            this = paste0(metagenomeDir,"/",dirNm)
+            dir.create(this)
 
-            if(length(bams) == 0){
-                execBowtie2(fasta[i],fastq1[i],fastq2[i],bowtieOptions,metagenomeDir)
-                hasOut = TRUE
+            if(readAsBams){
+
+                readData = saveReads(filenames$fasta[i],character(0),character(0),filenames$bam[[i]],this,
+                                     metagenomeDir,bowtieOptions,bowtiebuildOptions,dirNm)
+
             }
             else{
-                bam = bams[i]
+
+                readData = saveReads(filenames$fasta[i],filenames$fastq1[[i]],filenames$fastq2[[i]],character(0),this,
+                                     metagenomeDir,bowtieOptions,bowtiebuildOptions,dirNm)
+
             }
 
-            seqs = scanBamHeader(bam)[[1]]$targets
-            DS = dir(metagenomeDir)
-            reads = scanBam(bam,param =  params)
+            if(length(readData$path) > 0){
 
-            if(length(reads[[1]]$pos) > 0){
+                setupFastas(filenames$fasta[i],this,readData$seqNames)
 
-                this = paste0(metagenomeDir,"/",seqNames[i])
-                dir.create(this)
-                reads = data.table(pos = reads[[1]]$pos,width = reads[[1]]$qwidth,seq = reads[[1]]$rname,key = c("seq","pos"))
-                saveRDS(reads,paste0(this,"/",names(seqs[which.max(seqs)]),".Rds"))
+                #----------------- build up data for data system data.table --------------------
 
-                new.name.fasta = strsplit(fasta[i],"/")[[1]][length(new.name.fasta[[1]])]
-                system(paste0("cp ",fasta[i]," ",this))
-                file.rename(paste0(this,"/",new.name.fasta),paste0(this,"/bin.fasta"))
-                if(length(seqs) > 1){
-                    sep.fastas(fasta[i],this)
-                }
-                else{
-                    system(paste0("cp ",fasta[i]," ",this))
-                    file.rename(paste0(this,"/",new.name.fasta),paste0(this,"/",names(seqs[1]),".fasta"))
-                }
-
-                meanWidth = mean(reads$width)
-                sequences = seqinr::read.fasta(fasta[i],as.string = TRUE)
+                sequences = seqinr::read.fasta(filenames$fasta[i],as.string = TRUE)
                 names(sequences) = gsub(" .*","",names(sequences))
-                readPos = list()
-                readsToBe = c()
-                for(j in 1:length(seqs)){
-                    seqLngths[n] = unname(seqs[j])
-                    seqNms[n] = names(seqs[j])
-                    seqMnWdths[n] = meanWidth
 
-                    seqFastas[n] = paste0(this,"/",names(seqs[j]),".fasta")
-                    seqDir[n] = this
-                    lngth[n] = sum(seqs)
+                seqLngths = c(seqLngths,readData$length)
+                seqNms = c(seqNms,readData$seqNames)
+                seqMnWdths = c(seqMnWdths,readData$meanWidth)
+                seqFastas = c(seqFastas,paste0(this,"/",readData$seqNames,".fasta"))
+                seqDir = c(seqDir,rep(this,length(readData$seqNames)))
+                lngth = c(lngth,rep(sum(readData$length),length(readData$seqNames)))
 
-                    seqData[n] = dataPath
-                    subSequence = sequences[names(sequences) == names(seqs[j])][[1]]
-                    seqMinOv[n] = calcMinOverlap(subSequence,meanWidth)
+                readPos = list() #*
+                readsToBe = c() #*
 
-                    readPos[[j]] = seq(0,unname(seqs[j])-1,round(meanWidth*0.5))
-                    readsToBe[j] = subSequence
+                for(j in 1:length(readData$seqNames)){
+
+                    seqData[[n]] = readData$path[[j]]
+
+                    subSequence = sequences[names(sequences) == readData$seqNames[j]][[1]]
+                    seqMinOv[n] = calcMinOverlap(subSequence,readData$meanWidth[j])
+
+                    readPos[[j]] = seq(0,readData$length[j]-1,round(readData$meanWidth[j]*0.5)) #*
+                    readsToBe[j] = subSequence #*
 
                     n = n +1
                 }
 
+                #------------------ this and all lines ending with #* are preparation for crossmapping ----------
+
                 if(substr(this,1,1) == "~"){
+
                     this = paste0(Sys.getenv("HOME"),substr(this,2,nchar(this)))
+
                 }
                 newFasta = paste0(this,"/readsForMapX.fasta")
-                sequenceToFastaReads(readPos,readsToBe,meanWidth,newFasta,names(seqs))
-
+                sequenceToFastaReads(readPos,readsToBe,readData$meanWidth[1],newFasta,readData$seqNames) # cut the sequence into reads
             }
-
-            if(hasOut){
-                system(paste0("rm ",metagenomeDir,"/out*"))
+            else{
+                unlink(this,recursive = TRUE)
             }
         }
 
     }#----------------------------------------- end all genomes --------------------------------
 
-    tmpTable = data.table(name = seqNms,len = seqLngths,meanWidth = seqMnWdths,fasta = seqFastas,data = seqData,dir = seqDir,totalLength = lngth,minOverlap = seqMinOv,isCrossmapped = rep(FALSE,length(seqNms)))
+    tmpTable = data.table(name = seqNms,len = seqLngths,meanWidth = seqMnWdths,fasta = seqFastas,
+                          data = seqData,dir = seqDir,totalLength = lngth,minOverlap = seqMinOv,
+                          isCrossmapped = rep(FALSE,length(seqNms)))
     if(hasNew){
+
         if(initTable){
+
             saveRDS(tmpTable,paste0(metagenomeDir,"/DSTable.Rds"))
             initTable = FALSE
+
         }
         else{
+
             table = readRDS(paste0(metagenomeDir,"/DSTable.Rds"))
             tmpTable = rbind(tmpTable,table)
             saveRDS(tmpTable,paste0(metagenomeDir,"/DSTable.Rds"))
+
         }
     }
+    print(tmpTable)##################################
+
+    #------------- building the bowtie2 index for crossmapping --------------------
+
+    dr = dir(metagenomeDir)
+    dr = dr[which(dr != "Crossmaps")]
+    dr = dr[which(dr != "DSTable.Rds")]
+
+    tmpDr = paste0(metagenomeDir,dr,"/bin.fasta",collapse = " ")
+    system(paste0("cat ",tmpDr," >> ",metagenomeDir,"/metagenome.fasta"))
+
+    system(paste0("bowtie2-build ",paste0(bowtiebuildOptions,collapse = " ")," ",metagenomeDir,"/metagenome.fasta ",
+                  metagenomeDir,"/index"),ignore.stdout = TRUE)
 
     crossMapRRSDS(minIdL,metagenomeDir)
 
 }
 
-execBowtie2 <- function(fasta,fastq1,fastq2,bowtieOptions,metagenomeDir){
+# map the reads back to the refrence sequence and save them to the data system
+#
+saveReads <- function(fasta,fastq1,fastq2,bams,this,metagenomeDir,bowtieOptions,bowtieBuildOptions,dirNm){
 
-    system(paste0("bowtie2-build ",fasta," ",metagenomeDir,"/index"),ignore.stdout = TRUE)
-    if(is.null(fastq2)){
-        system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -U ",fastq1," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
+    if(length(bams) == 0){
+
+        num = length(fastq1)
+
     }
     else{
-        system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -1 ",fastq1,"-2 ",fastq2," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
+
+        num = length(bams)
+
     }
-    system(paste0("samtools view -bS ",metagenomeDir,"/out.sam > ",metagenomeDir,"/out.bam"))
+
+    n = 1
+    hasOut = FALSE
+
+    params = ScanBamParam(what = c("pos","qwidth","rname","mapq"))
+
+    seqNames = c()
+    seqLngs = c()
+    filenames = list()
+    meanWidths = c()
+    system(paste0("bowtie2-build ",paste(bowtieBuildOptions,collapse = " ")," ",fasta," ",metagenomeDir,"/index"),ignore.stdout = TRUE)
+
+    for(i in 1:num){
+
+        if(length(bams) == 0){
+
+            execBowtie2(fasta,fastq1[i],fastq2[i],bowtieOptions,metagenomeDir)
+            bam = paste0(metagenomeDir,"/out.bam")
+            hasOut = TRUE
+
+        }
+        else{
+
+            bam = bams[i]
+
+        }
+
+        seqs = scanBamHeader(bam)[[1]]$targets
+        reads = scanBam(bam,param =  params)
+
+        if(length(reads[[1]]$pos) > 0){
+
+            reads = data.table(pos = reads[[1]]$pos,width = reads[[1]]$qwidth,seq = reads[[1]]$rname,mapq = reads[[1]]$mapq,
+                               key = c("seq","pos"))
+            saveRDS(reads,paste0(this,"/",dirNm,"_",i,".Rds"))
+
+
+            toTake = which(!(names(seqs) %in% seqNames))
+            toAdd = which(seqNames %in% names(seqs))
+
+            seqNames = c(seqNames,names(seqs)[toTake])
+            seqLngs = c(seqLngs,unname(seqs)[toTake])
+            meanWidths = c(meanWidths,rep(mean(reads$width),length(seqs[toTake])))
+
+            for(j in toAdd){
+
+                filenames[[j]][length(filenames[[j]])+1] = paste0(this,"/",dirNm,"_",i,".Rds")
+
+            }
+            for(j in toTake){
+
+                filenames[[n]] = paste0(this,"/",dirNm,"_",i,".Rds")
+                n = n+1
+
+            }
+        }
+    }
+    if(hasOut){
+
+        system(paste0("rm ",metagenomeDir,"/out*"))
+
+    }
+    res = data.table(path = filenames,seqNames = seqNames,length = seqLngs,meanWidth = meanWidths)
+    return(res)
+}
+
+
+# decide in which way to execute bowtie2
+#
+execBowtie2 <- function(fasta,fastq1,fastq2,bowtieOptions,metagenomeDir){
+
+
+    if(is.null(fastq2)){
+
+        system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -U ",
+                      fastq1," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
+
+    }
+    else{
+        system(paste0("bowtie2 ",paste(bowtieOptions,collapse = " ")," -x ",metagenomeDir,"/index -1 ",
+                      fastq1,"-2 ",fastq2," -S ",metagenomeDir,"/out.sam"))#,ignore.stdout = TRUE)#,ignore.stderr = TRUE)
+
+    }
+    system(paste0("samtools view -bS -@ 3 ",metagenomeDir,"/out.sam > ",metagenomeDir,"/out.bam"))
     system(paste0("rm ",metagenomeDir,"/out.sam"))
-    bam = paste0(metagenomeDir,"/out.bam")
 }
 
-sep.fastas <- function(fasta,dir){
-    seqs = readDNAStringSet(fasta)
-    for(i in 1:length(seqs)){
-        seqinr::write.fasta(sequences = toString(seqs[i]),names =gsub(" .*","",names(seqs[i])),file.out = paste0(dir,"/",gsub(" .*","",names(seqs[i])),".fasta") )
+# setup the fasta files for a genome in the datasystem
+#
+setupFastas <- function(fasta,dir,seqs){
+
+    new.name.fasta = strsplit(fasta,"/")
+    new.name.fasta = new.name.fasta[[1]][length(new.name.fasta[[1]])]
+    system(paste0("cp ",fasta," ",dir))
+    file.rename(paste0(dir,"/",new.name.fasta),paste0(dir,"/bin.fasta"))
+
+    if(length(seqs) > 1){
+
+        sep.fastas(fasta,dir)
+
+    }
+    else{
+
+        system(paste0("cp ",fasta," ",dir))
+        file.rename(paste0(dir,"/",new.name.fasta),paste0(dir,"/",seqs[1],".fasta"))
+
     }
 }
 
+# write a seperate fasta file for all sequences contained in one fasta
+#
+sep.fastas <- function(fasta,dir){
 
+    seqs = readDNAStringSet(fasta)
+
+    for(i in 1:length(seqs)){
+
+        seqinr::write.fasta(sequences = toString(seqs[i]),names =gsub(" .*","",names(seqs[i])),file.out = paste0(dir,"/",gsub(" .*","",names(seqs[i])),".fasta") )
+
+    }
+}
+
+# check whether the genome already is in the data system
+#
 is.inRRSDS <- function(name,metagenomeDir){
+
     all = dir(metagenomeDir)
     res = FALSE
-    for(i in 1:length(all)){
-        if(all[i] == name || paste(metagenomeDir,all[i],sep = "") == name || paste(metagenomeDir,all[i],"/",sep = "") == name){
-            res = TRUE
-        }
+
+    if(name %in% all || name %in% paste0(metagenomeDir,all)  || name %in% paste0(metagenomeDir,all,"/") ){
+
+        res = TRUE
+
     }
     return(res)
 }
@@ -411,67 +709,68 @@ is.inRRSDS <- function(name,metagenomeDir){
 crossMapRRSDS <- function(minL,metagenomeDir){
 
     table = readRDS(paste0(metagenomeDir,"/DSTable.Rds"))
-    bins = table[, .("length" = sum(len),"isCrossmapped" = all(isCrossmapped)),by = "dir"]
+    bins = table[, .("length" = sum(len),"isCrossmapped" = all(isCrossmapped),"names" = .(name)),by = "dir"]
 
-    params = ScanBamParam(what = c("pos","qwidth","qname","rname"),mapqFilter = 40)
+    params = ScanBamParam(what = c("pos","qwidth","qname","rname"))
+    mappedAllready = c()
     #------------------------------------------------------ going through the datasystem------------------------------------------
     for(p in 1:(length(bins$dir)-1)){
-        print(p)#######################################
-        if(bins[p,]$isCrossmapped == FALSE){
-            for(j in (p+1):length(bins$dir)){
 
-                #---- choosing from which file to take the fasta and from which to take the reads and from which to take the seq --------
-                if(bins$length[j] > bins$length[p]){ # take the reads from the smaller one and the seq of the bigger one
-                    from = bins[j,]
-                    to = bins[p,]
-                }
-                else{
-                    from = bins[p,]
-                    to = bins[j,]
-                }
+        print(paste("1. At:",p,"Of:",length(bins$dir)))
 
-                # cutting all seqs of the smaller genome in peaces and writing these down as reads with name "seqName_positionOfCut"
-                readInput = paste0("-f ",from$dir,"/readsForMapX.fasta")
-                #------------------------------ mapping the reads onto the other seq with bowtie2 -----------------------------------------------------------------
+        if(bins$isCrossmapped[p] == FALSE){
 
-                system(paste0("bowtie2-build --threads 3 ",to$dir,"/bin.fasta ",to$dir,"/index"),ignore.stdout = TRUE)
-                system(paste0("bowtie2 -p 3 --no-unal -x ",to$dir,"/index ",readInput," -S ",from$dir,"/out.sam"),ignore.stdout = TRUE)
+            readInput = paste0("-f ",bins$dir[p],"/readsForMapX.fasta")
+            #------------------------------ mapping the reads onto the other seq with bowtie2 -----------------------------------------------------------------
 
-                system(paste0("samtools view -bS ",from$dir,"/out.sam > ",from$dir,"/out.bam"))
-                #------------------------------- readiying and saving the read data -------------------------------------------
-                mapped = scanBam(paste0(from$dir,"/out.bam"),param = params)
+            system(paste0("bowtie2 -a -p 3 --no-unal --score-min \"C,0,-1 -x\" ",metagenomeDir,"/index ",readInput," -S ",bins$dir[p],"/out.sam"),ignore.stdout = TRUE)
 
+            system(paste0("samtools view -bS ",bins$dir[p],"/out.sam > ",bins$dir[p],"/out.bam"))
+            #------------------------------- readiying and saving the read data -------------------------------------------
+            mapped = scanBam(paste0(bins$dir[p],"/out.bam"),param = params)
+
+            if(length(mapped[[1]]$pos) > 0){
+
+
+                otherGenInfo = str_split_fixed(mapped[[1]]$qname,";;",2)
                 map = data.table(names1 = as.character(mapped[[1]]$rname),
-                                 start1 = mapped[[1]]$pos,
-                                 end1 = mapped[[1]]$pos + mapped[[1]]$qwidth -1,
-                                 names2 = gsub(";;.*","",mapped[[1]]$qname),
-                                 start2 = as.integer(gsub(".*;;","",mapped[[1]]$qname)),
-                                 end2 =as.integer(gsub(".*;;","",mapped[[1]]$qname)) + mapped[[1]]$qwidth -1,
-                                 key = c("names1","names2"),
-                                 stringsAsFactors = FALSE )
+                                start1 = mapped[[1]]$pos,
+                                end1 = mapped[[1]]$pos + mapped[[1]]$qwidth -1,
+                                names2 = otherGenInfo[,1],
+                                start2 = as.integer(otherGenInfo[,2]),
+                                end2 =as.integer(otherGenInfo[,2])+ mapped[[1]]$qwidth -1,
+                                stringsAsFactors = FALSE,key = list("names1","start1") )
 
                 map = map[,.(start1 = list(start1),end1 = list(end1),start2 = list(start2),end2 = list(end2)),by  = list(names1,names2)]
 
+                map = map[names1 != names2]
+                map = map[!(names1 %in% mappedAllready)]
+                map = map[!(names2 %in% mappedAllready)]
+
                 if(length(map$names1) > 0){
+
                     sameConts = getIdenticalSeqsList(map$names1,map$start1,map$end1,map$names2,map$start2,map$end2,minL)
                     for(i in 1:length(sameConts)){
+
                         if(length(sameConts[[i]][[1]]) > 0){
+
                             conts1 = IRanges(start = sameConts[[i]][[2]],end = sameConts[[i]][[3]],names = sameConts[[i]][[1]])
                             conts2 = IRanges(start = sameConts[[i]][[4]],end = sameConts[[i]][[5]],names = sameConts[[i]][[1]])
 
                             toSave = list(conts2,conts1)
                             names(toSave) = c(sameConts[[i]][[6]],sameConts[[i]][[7]])
                             saveRDS(toSave,paste0(metagenomeDir,"/Crossmaps/",sameConts[[i]][[6]],"_X_",sameConts[[i]][[7]],".Rds"))
+
                         }
                     }
                 }
-                #-------------------------------- deleting everything that is of no further use ------------------------------------------
-
-                system(paste0("rm ",to$dir,"/*index*"))
-                system(paste0("rm ",from$dir,"/out.sam"))
-                system(paste0("rm ",from$dir,"/out.bam*"))
             }
-            table[dir == bins[p,]$dir]$isCrossmapped = TRUE
+            #-------------------------------- deleting everything that is of no further use ------------------------------------------
+
+            system(paste0("rm ",bins$dir[p],"/out.sam"))
+            system(paste0("rm ",bins$dir[p],"/out.bam"))
+            table[dir == bins$dir[p]]$isCrossmapped = TRUE
+            mappedAllready = c(mappedAllready,bins$names[p])
         }
     }
     saveRDS(table,paste0(metagenomeDir,"/DSTable.Rds"))

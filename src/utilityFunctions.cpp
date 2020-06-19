@@ -10,6 +10,38 @@
 
 //[[Rcpp::plugins(cpp14)]]
 
+// int KmerHash(int k,std::string kmer){
+//     int res = 0;
+//     for(int i = 0;i < kmer.size();i++){
+//         if(kmer[i] == 'C' || kmer[i] == 'c'){
+//             res += k*1;
+//         }
+//         if(kmer[i] == 'G' || kmer[i] == 'g'){
+//             res += k*1;
+//         }
+//         if(kmer[i] == 'T' || kmer[i] == 't'){
+//             res += k*1;
+//         }
+//
+//         k--;
+//     }
+//     return res;
+// }
+//
+// Rcpp::List getKmerCounts(std::vector<std::string> seqs,int k){
+//
+//     Rcpp::List res;
+//     std::vector<std::string>::iterator seqIt;
+//     for(seqIt = seqs.begin();seqIt != seqs.end();seqIt++){
+//         std::vector<int> tmp;
+//         for(int i = 0; i < ((*seqIt).size()-k);i++){
+//
+//         }
+//     }
+//
+//     return res;
+// }
+
 //[[Rcpp::export]]
 std::vector<std::string> makeFastaOutput(std::vector<std::string> &names,std::vector<std::string> &seqs,std::string outFile){
 
@@ -30,7 +62,7 @@ std::vector<std::string> makeFastaOutput(std::vector<std::string> &names,std::ve
             out << *sq << std::endl;
             sq++;
             i++;
-            if(*prev(nm) != *nm){
+            if(*next(nm) != *nm){
                 i = 1;
             }
         }
@@ -128,13 +160,16 @@ std::vector<std::string> subSeqs(std::string seq,std::vector<int> starts,std::ve
     std::vector<std::string> res;
     std::vector<int>::iterator st = starts.begin();
     std::vector<int>::iterator en = ends.begin();
+    std::string tmp;
     for(int i = 0;i < starts.size();i++){
         if(*en <= seq.size()){
-            res.push_back(seq.substr(*st,*en-*st+1));
+            tmp = seq.substr(*st,*en-*st+1);
         }
         else{
-            res.push_back(seq.substr(*st,seq.size()-1) + seq.substr(0,*en-seq.size()));
+            tmp = seq.substr(*st,seq.size()-1) + seq.substr(0,*en-seq.size());
         }
+        res.push_back(tmp);
+
         st++;
         en++;
     }

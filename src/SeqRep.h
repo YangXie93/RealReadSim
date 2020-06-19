@@ -67,7 +67,6 @@ public:
     // contig generation
     //
     void evalOverlap(){
-
       int count = 0;
       int start;
       int end;
@@ -109,7 +108,6 @@ public:
     // function to get all contiguos sequences on the coverage vector
     //
     Rcpp::List assembleTestContigs(int minContigLength){
-
         std::vector<int> starts;
         std::vector<int> ends;
         Rcpp::List readsPerSample;
@@ -117,22 +115,20 @@ public:
 
         int* covIt = cov;
         int i = 0;
-        int en = 1;
         int* it;
 
         while(*covIt > 0 && i < length){
           covIt++;
+          i++;
         }
 
-        if(covIt == cov+length-1){
+        if(i >= length-1){
           starts.push_back(1);
           ends.push_back(length);
           readsPerSample.push_back(getReadsPerSampleOnRange(1,length));
           covs.push_back(std::vector<int> (cov,cov+length-1));
         }
         else{
-
-          int n = 0;
           bool switching = true;
 
           if(covIt == cov){
@@ -140,37 +136,35 @@ public:
             covIt = cov+length;
           }
           else{
-            covIt--;
             it = covIt+1;
           }
-          i = it-cov;
-          en = it-cov+1;
+
+          int end = it-cov;
+          int start = 0;
 
           while(it != covIt){
-
             if(it >= cov+length){
               it = cov;
-              i = 0;
+              end = 0;
             }
 
             if(*(it) > 0 && switching){
-              n = i;
+              start = end;
               switching = false;
             }
             if(*(it) == 0 && !switching){
 
               switching = true;
-              if(i -n >= minContigLength){
-                starts.push_back(n+1);
-                ends.push_back(i);
-                readsPerSample.push_back(getReadsPerSampleOnRange(n+1,i));
-                covs.push_back(std::vector<int> (cov+n,cov+i));
+              if(end - start >= minContigLength){
+                starts.push_back(start+1);
+                ends.push_back(end);
+                readsPerSample.push_back(getReadsPerSampleOnRange(start+1,end));
+                covs.push_back(std::vector<int> (cov+start,cov+end));
               }
             }
 
             it++;
-            i++;
-            en++;
+            end++;
           }
 
         }
@@ -192,7 +186,6 @@ public:
     // function to add a value to a given range on the coverage vector
     //
     void addToCov(int* start,int* end,int val){
-
       int* tmp = start;
       int x = 1;
       while(start != end+1 && tmp != end+1){
@@ -209,7 +202,6 @@ public:
   // function to count the reads per sample on a given range of the genome
   //
   std::vector<int> getReadsPerSampleOnRange(int start,int end){
-
       int res[nrOfSamples];
       std::fill(res,(res+nrOfSamples),0);
 
@@ -229,7 +221,6 @@ public:
         }
 
       }
-
       return std::vector<int> (res,(res+nrOfSamples));
   }
 
