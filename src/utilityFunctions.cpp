@@ -58,7 +58,7 @@ std::vector<std::string> makeFastaOutput(std::vector<std::string> &names,std::ve
         for(nm = names.begin();nm != names.end();nm++){
             tmp = *nm+"."+std::to_string(i);
             res.push_back(tmp);
-            out << tmp << std::endl;
+            out << ">" << tmp << std::endl;
             out << *sq << std::endl;
             sq++;
             i++;
@@ -149,7 +149,6 @@ int calcMinOverlap(std::string seq,int meanWidth){
         tmp2 *= tmp1;
         minOverlap++;
     }
-    Rcpp::Rcout << "minOverlap ist: " << minOverlap <<"\n";
     return minOverlap;
 }
 

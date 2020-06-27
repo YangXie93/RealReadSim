@@ -5,47 +5,70 @@
 \title{realReadSim}
 \usage{
 realReadSim(
-  filenames_csv = "",
-  metagenomeDir = "~/RealReadSimDS",
-  coverage = 0,
-  takeAll = TRUE,
+  filenames_csv = character(0),
+  metagenomeDir,
+  genomesByName = character(0),
+  coverage = list(),
   nrOfSamples = 1,
-  bowtieOptions = c("--no-unal", "-p 3"),
+  bowtieOptions = "",
+  bowtieBuildOptions = "",
+  threads = 1,
   humanReadable = FALSE,
   readAsBams = TRUE,
   minMapq = 40,
   redraw = FALSE,
   repeatable = TRUE,
-  seed = 0,
+  seed = 1,
   minContigLength = 500,
-  minDist = 0.99,
+  minDist = 0,
   minIdenticalLength = 2000,
   fileOutput = TRUE,
-  outputFile = "~/RRSOut"
+  outputFile = "~/RRSOut",
+  allSamplesToOneColInOut = TRUE
 )
 }
 \arguments{
-\item{filenames_csv}{This parameter takes the name of a file in which the names of the fasta files and the name of the bam or fastq files and or the bowtie prebuild name are contained}
+\item{filenames_csv}{A character vector specifying the files containing the paths pointing to the fasta files and bam/fastq files of the input.}
 
-\item{coverage}{A integer vector containing the wished coverages of the individual genomes}
+\item{metagenomeDir}{A String specifying which metagenome datasystem to use, or where to build one if filenames_csv is given.}
 
-\item{humanReadable}{A boolean value determening wether there will be graphical output or not}
+\item{genomesByName}{A character vector containing the names of genomes to be used from metagenomeDir for this simulation.}
 
-\item{readAsBams}{A boolean value determening wether filenames_csv should be read as containing bam file names or not}
+\item{coverage}{A list of integer vectors. Each element of the vectors contains a coverage value for one sample that is to be simulated. If the list is shorter than the number of genomes that have been selected for the simulation, the last vector will be used for the rest of the genomes.}
 
-\item{minMapq}{A integer value stating the minimal mapq score of reads to use}
+\item{nrOfSamples}{The number of samples to be generated. (this can be ignored when multiple bam/fastq files are given for each genome).}
 
-\item{redraw}{A boolean value determening, if the asked for coverage is to much for the data set, reads from the same data set should be drawn again}
+\item{bowtieOptions}{A character vector containing the bowtie2 options for building a datasystem.}
 
-\item{repeatable}{A boolean value determening wether a seed will be set}
+\item{bowtieBuildOptions}{A character vector containing the bowtie2-build options for building a datasystem.}
 
-\item{seed}{A integer value used as seed when reapeatable = TRUE}
+\item{threads}{A integer specifying the number of threads to be used by bowtie2, bowtie2-build and samtools view.}
 
-\item{prebuild}{A boolean value that determines wether the prebuild function is to be used}
+\item{humanReadable}{A boolean value determening wether there will be graphical output or not.}
 
-\item{bowtieDefaultOptions}{A boolean value determening wether the set bowtie2 options schould be used or user defined options}
+\item{readAsBams}{A boolean value determening wether filenames_csv should be read as containing bam file names or fastq.}
 
-\item{asTempoaryDatabase}{A boolean value determening wether the data will be read in all at once or one by one}
+\item{minMapq}{A integer value stating the minimal mapq score of the reads to use for this simulation.}
+
+\item{redraw}{A boolean value determening, if the asked for coverage is to much for the data set, reads from the same data set should be drawn again.}
+
+\item{repeatable}{A boolean value determening wether a seed will be set.}
+
+\item{seed}{A integer value used as seed when reapeatable = TRUE.}
+
+\item{minContigLength}{The minimum length a simulated contig must have to be included in the results.}
+
+\item{minDist}{The minimum mean share a contigs coverage has to make up of a chimeric contig, so that the chimeric contig will be generated.}
+
+\item{minIdenticalLength}{The minimum length of a sequence that is identical on two genomes to be considered.}
+
+\item{outputFile}{A String giving the path to and first part of the names of the output files.}
+
+\item{allSamplesToOneColInOut}{A boolean value determening wether to have the coverage vectors of the simulated contigs in individual columns in the output file or in one column.}
+}
+\value{
+A data.table containing the simulated contigs, with the columns start (the first positoin of the contig on the sequence its reads come from), end (the last position of the contig on the sequence its reads come from), coverage (a vector containing the coverage for each position on the contig), seq (the DNA sequence of the vector), covVec (a vector containing the mean coverage to every sample),length (A integer stating the length of the contig), contName (a specific name for the contig).
+If a contigs name and the corresponding seqName are made up of multiple sequence names it means that the contig is chimeric and made up of the sequences mentioned in the name.
 }
 \description{
 This function simulates metagenomic data using real experimental reads

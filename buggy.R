@@ -58,11 +58,32 @@
 #
 # mkChimeras(s1,e1,cov1,s2,e2,cov2,a1s,a1e,a2s,a2e,sq1,sq2,nm1,nm2)
 
-#library(RealReadSim)
+# library(RealReadSim)
 #x = realReadSim(c("/home/yang/uni/BA-Projekt-Data/testBinning.txt","/home/yang/uni/BA-Projekt-Data/testBinning.txt"),takeAll = TRUE,metagenomeDir = "~/testMultiSampleInput")
 #x = realReadSim(takeAll = TRUE,metagenomeDir = "~/testMetagenome",fileOutput = TRUE,outputFile = "~/out")
 
-#x = realReadSim("~/uni/BA-Projekt-Data/testRRS.txt",takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS",outputFile = "~/camiLowOut")
+
+# metagenomeDir = "~/Cami_low_DS"
+# bowtiebuildOptions = ""
+#
+# dr = dir(metagenomeDir)
+# dr = dr[which(dr != "Crossmaps")]
+# dr = dr[which(dr != "DSTable.Rds")]
+# dr = dr[!str_detect(dr,"index.*")]
+#
+#
+# x = realReadSim("~/uni/CAMI-Daten/low/testRRS.txt",readAsBams = FALSE,metagenomeDir = "~/Cami_low_DS",outputFile = "~/camiLowOut")
+#
+# low_table = readRDS("~/Cami_low_DS/DSTable.Rds")
+# low_table$isCrossmapped = rep(FALSE,length(low_table$isCrossmapped))
+# saveRDS(low_table,"~/Cami_low_DS/DSTable.Rds")
+# crossMapRRSDS(minL = 2000,threads = 3,metagenomeDir = "~/Cami_low_DS/")
+#
+#
+# buildInputCsv("~/uni/CAMI-Daten/medium/source_genomes_medium/source_genomes/",c("~/uni/CAMI-Daten/medium/"))
+#
+# addToDataSystem("~/uni/CAMI-Daten/medium/mediumInFile.txt",bowtieOptions = "",minIdL = 2000,metagenomeDir = "~/Cami_medium_DS",bowtiebuildOptions = "",threads = 3,readAsBams = FALSE)
+
 
 #x = realReadSim(takeAll = TRUE,readAsBams = FALSE,metagenomeDir = "~/CamiDataDS",fileOutput = TRUE,outputFile = "~/out")
 # n = 0
@@ -89,6 +110,9 @@
 # library("data.table")
 # library("seqinr")
 # library("pryr")
+# library("stringr")
+
+
 # library(RealReadSim)
 # #crossMapRRSDS(2000,"~/CAMI-High-DS/")
 # x = realReadSim(filenames_csv = c("~/highIn1.txt","~/highIn2.txt","~/highIn3.txt","~/highIn4.txt","~/highIn5.txt"),
@@ -98,11 +122,11 @@
 
 
 # test getIdenticalSeqs
-
-# starts1 = c(31,33,34,36)
-# ends1 = c(34,35,37,38)
-# starts2 = c(8,7,8,10)
-# ends2 = c(11,9,11,12)
+# Rcpp::sourceCpp('src/getIdenticalSeqs.cpp')
+# starts1 = c(31,33,34,35,36)
+# ends1 = c(34,35,37,38,38)
+# starts2 = c(8,7,8,11,10)
+# ends2 = c(11,9,11,14,12)
 #
 # print(getIdenticalSeqs(starts1,ends1,starts2,ends2,"1","2"))
 #
@@ -129,14 +153,22 @@
 #
 # for(i in 1:length(medium1Ins270dir)){
 #         x = which(medium1Ins270dir == medium1Ins5000dir[i])
-#         system(paste0("cat ",path1,medium1Ins5000dir[i]," >> ",path2,medium1Ins270dir[x]))
+#         if(length(x) > 0)
+#                 system(paste0("cat ",path1,medium1Ins5000dir[i]," >> ",path2,medium1Ins270dir[x]))
 # }
 
 #getLast8("/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning")
-Rcpp::sourceCpp('~/prepareCamiDataR.cpp')
+
+
+Rcpp::sourceCpp('/home/yang/prepareCamiDataR.cpp')
+
+prepareCamiData("/home/yang/uni/CAMI-Daten/high/prepInFile.txt")
+
 #prepare(c("/home/yang/uni/CAMI-Daten/low/RL_S001__insert_270.fq","/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning","/home/yang/uni/CAMI-Daten/low/preparedFqs/"))
 
-prepareCamiData("/home/yang/uni/CAMI-Daten/medium/prepInFile.txt")
+#99829122
+
+# prepareCamiData("/home/yang/uni/CAMI-Daten/medium/prepInFile.txt")
 
 # medium1Ins5000dir = dir("~/uni/CAMI-Daten/medium/prepFq2_5000/")
 # medium1Ins270dir = dir("~/uni/CAMI-Daten/medium/prepFq2_270/")
@@ -160,3 +192,35 @@ prepareCamiData("/home/yang/uni/CAMI-Daten/medium/prepInFile.txt")
               # readPath = c("~/uni/CAMI-Daten/high/prepFqs1","~/uni/CAMI-Daten/high/prepFqs2","~/uni/CAMI-Daten/high/prepFqs3",
               #              "~/uni/CAMI-Daten/high/prepFqs4","~/uni/CAMI-Daten/high/prepFqs5"),
               # out = "~/highIncsv")
+#
+# namesLow = dir("~/uni/CAMI-Daten/low/preparedFqs")
+# namesLowx = gsub("_1_.fq|_2_.fq","",namesLow)
+# path = "~/uni/CAMI-Daten/low/"
+#
+# dotBinning = c()
+# dotFq = c()
+#
+# for(i in (1:length(namesLow))){
+#         print(i)
+#         dotBinning[i] = system(paste0("cat ",path,"gs_read_mapping.binning | grep -c ",namesLowx[i]),intern = TRUE)
+#         dotFq[i] = system(paste0("wc -l ",path,"preparedFqs/",namesLow[i]),intern = TRUE)
+# }
+#
+# lineNrs = data.frame(binning = dotBinning,fastq = dotFq)
+# print(data.frame(binning = dotBinning,fastq = (dotFq/4)))
+# readNum = system(paste0("wc -l ",path,"/RL_S001__insert_270.fq"),intern = TRUE)
+# readNum = str_split_fixed(readNum," ",n =2)[,1]
+# readNum = as.integer(readNum)
+# readNumTrue = readNum/4
+#
+# readNumBin = system(paste0("wc -l ",path,"/gs_read_mapping.binning"),intern = TRUE)
+# readNumBin = str_split_fixed(readNumBin," ",n =2)[,1]
+# readNumBin = as.integer(readNumBin)
+
+#testReadHash("/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning.l8","/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning")
+#
+
+assignInNamespace("cedta.override",
+                  c(data.table:::cedta.override,"RealReadSim"),
+                  "data.table")
+

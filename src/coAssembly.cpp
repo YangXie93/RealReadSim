@@ -96,242 +96,10 @@ void fuseCovs(int nrOv,int stOv1,int stOv2,std::vector<int>* tcov1,std::vector<i
 }
 
 
-// // function to calculate the aproximate per sample read count for a given per sample read count vector
-// //
-// std::vector<int> partialReadNrVec(std::vector<int> *readNrVec, int length, int lengthPart){
-//     double share = lengthPart/(double)length;
-//     double rest = 1.0 -share;
-//     std::vector<int> res;
-//     std::vector<int>::iterator rnvIt;
-//     for(rnvIt = readNrVec->begin();rnvIt != readNrVec->end();rnvIt++){
-//         res.push_back((int) ((*rnvIt) * share));
-//         *rnvIt = (int) ((*rnvIt) * rest);
-//     }
-//     return res;
-// }
-
-// // function that fuses two contigs. Residues are saved as individual contigs. start, end, sequence and coverage values are modified
-// //
-// void fuseCovs(int nrOv,int stOv1,int stOv2,std::string name2,double p2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2,std::vector<int>* trv1,std::vector<int>* trv2){
-//
-//     // Rcpp::Rcout << tsq1->size() << std::endl;
-//
-//     std::vector<int> tmp;
-//     std::vector<int> tmp1;
-//     std::string s = "";
-//
-//     std::vector<int>* st;
-//     std::vector<int>* en;
-//     std::list<std::vector<int> >* co;
-//     std::list<std::string>* se;
-//     std::vector<std::string>* nm;
-//     std::list<std::vector<int> >* rv;
-//
-//     int frontS;
-//     int frontE;
-//     std::string frontSeq;
-//     std::string frontNm;
-//     std::vector<int> frontCv;
-//
-//     int length;
-//
-//     bool* save;
-//     bool hasFront = false;
-//     bool newFront = false;
-//     int countSave = 0;
-//
-//     if(swtch){
-//
-//         se = &rSq2;
-//         co = &rCv2;
-//         st = &rS2;
-//         en = &rE2;
-//         nm = &rNm2;
-//         rv = &rReadNrVec2;
-//
-//         save = &save2;
-//
-//         length = tsq2->size();
-//     }
-//     else{
-//
-//         se = &rSq1;
-//         co = &rCv1;
-//         st = &rS1;
-//         en = &rE1;
-//         nm = &rNm1;
-//         rv = &rReadNrVec2;
-//
-//         save = &save1;
-//
-//         length = tsq1->size();
-//     }
-//
-//     // preoverlap section
-//     if(stOv1 > 0){
-//
-//         for(int n = 0;n < stOv1;n++){
-//             tmp.push_back((*tcov1)[n]);
-//         }
-//         s = s + (*tsq1).substr(0,stOv1);
-//
-//         if(stOv2 > 0){
-//
-//             for(int n = 0;n < stOv2;n++){
-//                 frontCv.push_back((*tcov2)[n]);
-//             }
-//             frontS = *ts2;
-//             frontE = *ts2+stOv2-1;
-//             frontSeq = (*tsq2).substr(0,stOv2);
-//
-//             frontNm = name2;
-//             hasFront = true;
-//         }
-//         else{
-//             countSave++;
-//         }
-//     }
-//     else{
-//
-//         if(stOv2 > 0){
-//
-//             if(p2 >= minDist){
-//
-//                 for(int n = 0;n < stOv2;n++){
-//                     tmp.push_back((*tcov2)[n]);
-//                 }
-//                 *ts1 -= (stOv2);
-//                 s = s+ (*tsq2).substr(0,stOv2);
-//
-//                 countSave++;
-//                 newFront = true;
-//             }
-//             else{
-//
-//                 for(int n = 0;n < stOv2;n++){
-//                     frontCv.push_back((*tcov2)[n]);
-//                 }
-//                 frontS = *ts2;
-//                 frontE = *ts2+stOv2-1;
-//                 frontSeq = (*tsq2).substr(0,stOv2);
-//
-//                 frontNm = name2;
-//                 hasFront = true;
-//                 tmp1.clear();
-//             }
-//         }
-//         else{
-//             countSave++;
-//         }
-//     }
-//
-//     // Rcpp::Rcout << tsq1->size() << std::endl;
-//     // overlap section
-//     for(int n = 0;n < nrOv;n++){
-//         tmp.push_back((*tcov1)[stOv1+n]+(*tcov2)[stOv2+n]);
-//     }
-//     // Rcpp::Rcout << stOv1 << " " << nrOv << std::endl;
-//     s = s + (*tsq1).substr(stOv1,nrOv);
-//
-//     // Rcpp::Rcout << tsq1->size() << std::endl;
-//     // post-overlap
-//     if(stOv1+nrOv < (*tcov1).size()){
-//
-//         for(int n = stOv1+nrOv;n < (*tcov1).size();n++){
-//             tmp.push_back((*tcov1)[n]);
-//         }
-//         s = s + (*tsq1).substr(stOv1+nrOv,(*tsq1).size()-1);
-//
-//         if((*tcov2).size() > stOv2+nrOv){
-//
-//             if(hasFront){
-//                 co->push_back(frontCv);
-//                 st->push_back(frontS);
-//                 en->push_back(frontE);
-//                 se->push_back(frontSeq);
-//                 nm->push_back(frontNm);
-//                 rv->push_back(partialReadNrVec(trv2,length,frontSeq.size()));
-//             }
-//             *tsq2 = (*tsq2).substr(stOv2+nrOv-1,(*tsq2).size()-(stOv2+nrOv));
-//             tmp1 = std::vector<int> (next((*tcov2).begin(),stOv2+nrOv),(*tcov2).end());
-//             *tcov2 = tmp1;
-//             *ts2 += stOv2+nrOv;
-//         }
-//         else{
-//             if(hasFront){
-//                 *ts2 = frontS;
-//                 *te2 = frontE;
-//                 *tsq2 = frontSeq;
-//                 *tnm2 = frontNm;
-//                 *tcov2 = frontCv;
-//                 partialReadNrVec(trv2,length,frontSeq.size());
-//             }
-//             countSave++;
-//         }
-//     }
-//     else{
-//
-//         if((*tcov2).size() > stOv2+nrOv){
-//
-//             if(p2 >= minDist){
-//                 s += (*tsq2).substr(stOv2+nrOv,(*tsq2).size()-1);
-//                 for(int n = stOv2+nrOv;n < (*tcov2).size();n++){
-//                     tmp.push_back((*tcov2)[n]);
-//                 }
-//                 int x = stOv1;
-//                 if(newFront){
-//                     x = stOv2;
-//                 }
-//                 *te1 = ((*ts1)+x+nrOv-1)+(((*te2)-(*ts2)+1) -(stOv2+nrOv));
-//
-//                 if(hasFront){
-//                     *ts2 = frontS;
-//                     *te2 = frontE;
-//                     *tsq2 = frontSeq;
-//                     *tnm2 = frontNm;
-//                     *tcov2 = frontCv;
-//                     partialReadNrVec(trv2,length,frontSeq.size());
-//                 }
-//                 countSave++;
-//             }
-//             else{
-//                 if(hasFront){
-//                     co->push_back(frontCv);
-//                     st->push_back(frontS);
-//                     en->push_back(frontE);
-//                     se->push_back(frontSeq);
-//                     nm->push_back(frontNm);
-//                     rv->push_back(partialReadNrVec(trv2,length,frontSeq.size()));
-//                 }
-//                 *tsq2 = (*tsq2).substr(stOv2+nrOv-1,(*tsq2).size()-(stOv2+nrOv));
-//                 tmp1 = std::vector<int> (next((*tcov2).begin(),stOv2+nrOv),(*tcov2).end());
-//                 *tcov2 = tmp1;
-//                 *ts2 += stOv2+nrOv;
-//             }
-//         }
-//         else{
-//             if(hasFront){
-//                 *ts2 = frontS;
-//                 *te2 = frontE;
-//                 *tsq2 = frontSeq;
-//                 *tnm2 = frontNm;
-//                 *tcov2 = frontCv;
-//             }
-//             countSave++;
-//         }
-//     }
-//     if(countSave >= 2){
-//         *save = false;
-//     }
-//     *tcov1 = tmp;
-//     *tsq1 = s;
-//     // Rcpp::Rcout << tsq1->size() << std::endl;
-// }
 
 // function that fuses the values of the readcount per sample values of two contigs
 //
 void fuseReadNrVecs(std::vector<int>& readNrVec1, std::vector<int>& readNrVec2){
-    Rcpp::Rcout << "fuseReadNrVec\n";
     std::vector<int> res;
     std::vector<int>::iterator j = readNrVec2.begin();
 
@@ -339,7 +107,6 @@ void fuseReadNrVecs(std::vector<int>& readNrVec1, std::vector<int>& readNrVec2){
         *(i) += *(j);
         j++;
     }
-    Rcpp::Rcout << "fuseReadNrVec end\n";
 }
 
 // function stringing together translateOverlap(), fuseCovs, fuseReadNrVecs and calculates the coverage distance value for each contig
@@ -347,7 +114,6 @@ void fuseReadNrVecs(std::vector<int>& readNrVec1, std::vector<int>& readNrVec2){
 //
 void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string name2,int* ts1,int* te1,int* ts2,int* te2,std::string* tsq1,std::string* tsq2,std::string* tnm1,std::string* tnm2,std::vector<int>* tcov1,std::vector<int>* tcov2,std::vector<int>* trv1,std::vector<int>* trv2)
 {
-    Rcpp::Rcout << "fuseContigs\n";
     std::vector<int> site = translateOverlap(*ts1,*te1,*ts2,*te2,as1,ae1,as2,ae2);
 
     bool fuse1 = (site[0] == 0 && site[1] == (*te1-*ts1));
@@ -359,14 +125,16 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
 
     double dist1 = 0;
     double dist2 = 0;
+    double comb = 0;
     int n;
     for(n = 0; n < siteLength;n++){
-        dist1 += *(s1+n)/(double)(*(s1+n)+*(s2+n));
-        dist2 += *(s2+n)/(double)(*(s1+n)+*(s2+n));
+        dist1 += *(s1+n);
+        dist2 += *(s2+n);
+        comb += *(s1+n)+*(s2+n);
     }
 
-    dist1 /= n+1;
-    dist2 /= n+1;
+    dist1 /= comb;
+    dist2 /= comb;
 
 
 
@@ -374,8 +142,7 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
     {
 
         if( (fuse2 || (fuse1 && fuse2 && tcov2->size() < tcov1->size())) && (dist1 > minDist) ){
-            //swtch = true;
-            // fuseCovs(siteLength,site[0],site[2],name2,dist2,ts1,te1,ts2,te2,tsq1,tsq2,tnm1,tnm2,tcov1,tcov2,trv1,trv2);
+
             fuseCovs(siteLength,site[0],site[2],tcov1,tcov2);
             fuseReadNrVecs(*trv1,*trv2);
             addToNm1 = true;
@@ -383,8 +150,7 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
             save1 = true;
         }
         if( (fuse1 || (fuse1 && fuse2 && tcov1->size() < tcov2->size())) && (dist2 > minDist) ){
-            // swtch = false;
-            // fuseCovs(siteLength,site[2],site[0],name1,dist1,ts2,te2,ts1,te1,tsq2,tsq1,tnm2,tnm1,tcov2,tcov1,trv2,trv1);
+
             fuseCovs(siteLength,site[2],site[0],tcov2,tcov1);
             fuseReadNrVecs(*trv2,*trv1);
             addToNm2 = true;
@@ -394,7 +160,6 @@ void fuseContigs(int as1,int ae1,int as2,int ae2,std::string name1,std::string n
 
     }
 
-    Rcpp::Rcout << "fuseContigs end\n";
 }
 
 // function determening wether two contigs have identical sequences or not
@@ -404,83 +169,6 @@ bool hasOverlap(int c1s,int c1e,int c2s,int c2e,int a1s,int a1e,int a2s,int a2e)
 {
     return (a1s <= c1e && a1e >= c1s && a2s <= c2e && a2e >= c2s && ((c1e-a1s) >= (c2s-a2s)) && ((c1s-a1s) <= (c2e-a2s)));
 }
-
-// // function determining wether two contigs from the same genome overlapp or not (may arise after fusion)
-// //
-// bool hasSameGenOverlap(int e1,int s2,int as,int ae){
-//     return (e1 > s2 && e1 < ae && e1 >= as && s2 > as && s2 <= ae);
-// }
-
-// // function to fuse two contigs from the same genome that overlapp
-// //
-// void fuseSameGenCont(std::vector<int>::iterator s,std::vector<int>::iterator e,std::list<std::vector<int> >::iterator cov,std::list<std::string>::iterator seq,std::list<std::vector<int> >::iterator rnv,int s2,int e2,std::vector<int> cov2,std::string seq2,std::vector<int> rnv2){
-//
-//
-//
-//     fuseReadNrVecs(*rnv,rnv2);
-//
-//     bool whichS = s2 > *s;
-//     bool whichE = e2 > *e;
-//     int pos;
-//     int diff;
-//     std::vector<int>::iterator c1 = (*cov).begin();
-//     std::vector<int>::iterator c2 = cov2.begin();
-//
-//     std::vector<int> tmpC;
-//     std::string tmpS = "";
-//
-//     // determening which start to use
-//     if(whichS){
-//         pos = s2-*s;
-//
-//         for(c1 = c1;c1 != next((*cov).begin(),pos);c1++){
-//             tmpC.push_back(*c1);
-//         }
-//         for(c1 = c1;c1 != (*cov).end() && c2 != cov2.end();c1++){
-//             tmpC.push_back(*c1 += *c2);
-//             c2++;
-//         }
-//         tmpS += (*seq).substr(0,distance((*cov).begin(),c1));
-//     }
-//     else{
-//         pos = *s-s2;
-//         for(c2 = c2;c2 != next(cov2.begin(),pos);c2++){
-//             tmpC.push_back(*c2);
-//         }
-//         for(c1 = c1;c1 != (*cov).end() && c2 != cov2.end();c1++){
-//             tmpC.push_back(*c1 += *c2);
-//             c2++;
-//         }
-//         tmpS += seq2.substr(0,distance(cov2.begin(),c2));
-//         *s = s2;
-//     }
-//
-//     // determening which end to use
-//     if(whichE){
-//         diff = distance(cov2.begin(),c2);
-//         while(c2 != cov2.end()){
-//             tmpC.push_back(*c2);
-//             c2++;
-//         }
-//         if(diff < seq2.size()){
-//             tmpS += seq2.substr(diff);
-//         }
-//         *e = e2;
-//     }
-//     else{
-//         diff = distance((*cov).begin(),c1);
-//         while(c1 != (*cov).end()){
-//             tmpC.push_back(*c1);
-//             c1++;
-//         }
-//         if(diff < (*seq).size()){
-//             tmpS += (*seq).substr(diff);
-//         }
-//     }
-//
-//     *cov = tmpC;
-//     *seq = tmpS;
-// }
 
 // function to set many iterators forward
 //
@@ -627,16 +315,13 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
         //checking wether to save the data for genome one
         if(i || !save1){
             if(save1){
-               // if(s1 != starts1.begin() && hasSameGenOverlap(rE1.back(),tmpS1,lastAs1,lastAe1)){
-               //      fuseSameGenCont(prev(rS1.end()),prev(rE1.end()),prev(rCv1.end()),prev(rSq1.end()),prev(rReadNrVec1.end()),tmpS1,tmpE1,tmpC1,tmpSq1,tmpRV1);
-               //  }
-               //  else{
-                    if(addToNm1){
-                        tmpNm1 += ":" +(*nm2);
-                    }
-                    iSave(tmpS1,tmpE1,tmpSq1,tmpNm1,tmpC1,tmpRV1);
-                    addToNm1 = false;
-                // }
+
+                if(addToNm1){
+                    tmpNm1 += ":" +(*nm2);
+                }
+                iSave(tmpS1,tmpE1,tmpSq1,tmpNm1,tmpC1,tmpRV1);
+                addToNm1 = false;
+
                 lastAs1 = *as1;
                 lastAe1 = *ae1;
                 lastAs2 = *as2;
@@ -654,16 +339,13 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
         //checking wether to save the data for genome two
         if((j || !save2) && s1 != starts1.end()){
             if(save2){
-                // if(s2 != starts2.begin() && hasSameGenOverlap(*prev(rE2.end()),tmpS2,lastAs2,lastAe2)){
-                //     fuseSameGenCont(prev(rS2.end()),prev(rE2.end()),prev(rCv2.end()),prev(rSq2.end()),prev(rReadNrVec2.end()),tmpS2,tmpE2,tmpC2,tmpSq2,tmpRV2);
-                // }
-                // else{
-                    if(addToNm2){
-                        tmpNm2 += ":" +(*nm1);
-                    }
-                    jSave(tmpS2,tmpE2,tmpSq2,tmpNm2,tmpC2,tmpRV2);
-                    addToNm2 = false;
-                // }
+
+                if(addToNm2){
+                    tmpNm2 += ":" +(*nm1);
+                }
+                jSave(tmpS2,tmpE2,tmpSq2,tmpNm2,tmpC2,tmpRV2);
+                addToNm2 = false;
+
                 lastAs2 = *as2;
                 lastAe2 = *ae2;
                 lastAs1 = *as1;
@@ -688,42 +370,25 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
     // save contigs if they were still stored in the working variables
     //
     if(save1 && !i){
-        // if(rE1.size() > 0 && hasSameGenOverlap(rE1.back(),tmpS1,lastAs1,lastAe1)){
-        //         fuseSameGenCont(prev(rS1.end()),prev(rE1.end()),prev(rCv1.end()),prev(rSq1.end()),prev(rReadNrVec1.end()),tmpS1,tmpE1,tmpC1,tmpSq1,tmpRV1);
-        // }
-        // else{
-            iSave(tmpS1,tmpE1,tmpSq1,tmpNm1,tmpC1,tmpRV1);
 
-        // }
+        iSave(tmpS1,tmpE1,tmpSq1,tmpNm1,tmpC1,tmpRV1);
+
         plusplus(&s1,&e1,&sq1,&nm1,&c1,&rnv1);
     }
     if(save2 && !j){
-        // if(rE2.size() > 0 && hasSameGenOverlap(rE2.back(),tmpS2,lastAs2,lastAe2)){
-        //     fuseSameGenCont(prev(rS2.end()),prev(rE2.end()),prev(rCv2.end()),prev(rSq2.end()),prev(rReadNrVec2.end()),tmpS2,tmpE2,tmpC2,tmpSq2,tmpRV2);
-        // }
-        // else{
-            jSave(tmpS2,tmpE2,tmpSq2,tmpNm2,tmpC2,tmpRV2);
-        // }
+        jSave(tmpS2,tmpE2,tmpSq2,tmpNm2,tmpC2,tmpRV2);
+
         plusplus(&s2,&e2,&sq2,&nm2,&c2,&rnv2);
     }
     // save all contigs that beginn after the last identical sequence
     //
     while(distance(s1, starts1.end()) > 0){
-        // if(rE1.size() > 0 && hasSameGenOverlap(rE1.back(),*s1,lastAs1,lastAe1)){
-        //     fuseSameGenCont(prev(rS1.end()),prev(rE1.end()),prev(rCv1.end()),prev(rSq1.end()),prev(rReadNrVec1.end()),*s1,*e1,*c1,*sq1,*rnv1);
-        // }
-        // else{
-            iSave(*s1,*e1,*sq1,*nm1,*c1,*rnv1);
-        // }
+        iSave(*s1,*e1,*sq1,*nm1,*c1,*rnv1);
+
         plusplus(&s1,&e1,&sq1,&nm1,&c1,&rnv1);
     }
     while(distance(s2, starts2.end()) > 0){
-        // if(rE2.size() > 0 && hasSameGenOverlap(rE2.back(),*s2,lastAs2,lastAe2)){
-        //     fuseSameGenCont(prev(rS2.end()),prev(rE2.end()),prev(rCv2.end()),prev(rSq2.end()),prev(rReadNrVec2.end()),*s2,*e2,*c2,*sq2,*rnv2);
-        // }
-        // else{
-            jSave(*s2,*e2,*sq2,*nm2,*c2,*rnv2);
-        // }
+        jSave(*s2,*e2,*sq2,*nm2,*c2,*rnv2);
         plusplus(&s2,&e2,&sq2,&nm2,&c2,&rnv2);
     }
     List res = List::create(rS1,rS2,rE1,rE2,rSq1,rSq2,rCv1,rCv2,rNm1,rNm2,rReadNrVec1,rReadNrVec2);
@@ -742,5 +407,24 @@ List mkChimeras(std::vector<int>& starts1,std::vector<int>& ends1,std::list<std:
     rReadNrVec2.clear();
     return res;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

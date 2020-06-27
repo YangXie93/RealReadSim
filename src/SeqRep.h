@@ -102,7 +102,6 @@ public:
           count = 0;
           best = 0;
       }
-      Rcpp::Rcout << sortedOut << " reads have been sorted out\n";
     }
 
     // function to get all contiguos sequences on the coverage vector
@@ -252,6 +251,9 @@ private:
     // indicies of reads that have been sorted out by evalOverlap()
     std::vector<int> toSkip;
 };
+
+
+
 
 
 #endif

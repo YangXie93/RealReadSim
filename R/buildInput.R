@@ -1,6 +1,5 @@
 buildInputCsv <- function(fastaPath,readPath,mode = "fastq",out = "~"){
-    print(length(fastaPath))
-    print(length(readPath))
+
     if(length(fastaPath) != length(readPath)){
         print("fastaPath and readPath have to have the same length")
         return(0)
@@ -20,7 +19,7 @@ buildInputCsv <- function(fastaPath,readPath,mode = "fastq",out = "~"){
         fastas = dir(fastaPath[j])
         reads = dir(readPath[j])
         if(mode == "fastq"){
-            namesReads = sub(".fastq|.fq|_[1|2]_.*","",reads)
+            namesReads = gsub(".fastq$|.fq$|_[1|2]_.fastq$|_[1|2]_.fq$","",reads)
         }
         if(mode == "bam"){
             namesReads = sub(".bam","",reads)
@@ -52,7 +51,7 @@ buildInputCsv <- function(fastaPath,readPath,mode = "fastq",out = "~"){
             table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath,rLink1))
         }
         else{
-            table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath,rLink1),readsRev = rLink2)
+            table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath[j],rLink1),readsRev = rLink2)
         }
         write.csv(table,paste0(out,j,".txt"),row.names = FALSE,quote = FALSE)
         res[j] = paste0(out,j,".txt")

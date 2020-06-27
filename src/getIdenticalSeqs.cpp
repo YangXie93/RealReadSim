@@ -10,12 +10,12 @@ using namespace Rcpp;
 // class representing a contig that is identical on two different genomes. It gets reads that mapped to both genomes in the a cohesive
 // region and builds a contig seeing which reads makeup a contiguos identical sequence which is then saved
 //
-class Contig{
+class Stretch{
     public:
 
         void addMany(std::vector<int>::iterator& st1b,std::vector<int>::iterator& st1e,std::vector<int>::iterator& en1b,std::vector<int>::iterator& st2b,std::vector<int>::iterator& en2b){
-            while(st1b != st1e){
-                if(hasOverlap(*st1b,*en1b)){
+            while(distance(st1b, st1e) > 0){
+                if(s1+s2+e1+e2 == 0 || hasOverlap(*st1b,*en1b)){
                     if(this->add(*st1b,*en1b,*st2b,*en2b)){
 
 
@@ -36,15 +36,16 @@ class Contig{
                     en2b++;
                 }
                 else{
-                    if(!hasNextSeed){
-                        nextSeedS1 = st1b;
-                        nextSeedE1 = en1b;
-                        nextSeedS2 = st2b;
-                        nextSeedE2 = en2b;
-                        hasNextSeed = true;
-                    }
+
                     break;
                 }
+            }
+            if(!hasNextSeed){
+                nextSeedS1 = st1b;
+                nextSeedE1 = en1b;
+                nextSeedS2 = st2b;
+                nextSeedE2 = en2b;
+                hasNextSeed = true;
             }
         }
 
@@ -121,6 +122,9 @@ class Contig{
         std::vector<int>::iterator getNextE2(){
             return nextSeedE2;
         }
+        bool getHasNext(){
+            return hasNextSeed;
+        }
     private:
         int s1 = 0;
         int e1 = 0;
@@ -135,7 +139,7 @@ class Contig{
         bool hasNextSeed = false;
 };
 
-// function tying the Contig object to R
+// function tying the Stretch object to R
 //
 //[[Rcpp::export]]
 List getIdenticalSeqs(std::vector<int>& starts1,std::vector<int>& ends1,std::vector<int>& starts2,std::vector<int>& ends2,std::string nm1,std::string nm2,int minL = 0){
@@ -155,7 +159,7 @@ List getIdenticalSeqs(std::vector<int>& starts1,std::vector<int>& ends1,std::vec
 
     int n = 1;
     while(distance(st1,st1End) > 0){
-        Contig tmp;
+        Stretch tmp;
         tmp.addMany(st1,st1End,en1,st2,en2);
         if(tmp.getLength() >= minL){
             contStarts1.push_back(tmp.getS1());
@@ -184,7 +188,6 @@ List getIdenticalSeqsList(std::vector<std::string> &names1,std::list<std::vector
     std::vector<std::string>::iterator nm1 = names1.begin();
     std::vector<std::string>::iterator nm2 = names2.begin();
 
-    int i = 1;//################
     for(s1 = starts1.begin();s1 != starts1.end();s1++){
         res.push_back(getIdenticalSeqs(*s1,*e1,*s2,*e2,*nm1,*nm2,minL));
         s2++;
@@ -193,7 +196,6 @@ List getIdenticalSeqsList(std::vector<std::string> &names1,std::list<std::vector
         nm1++;
         nm2++;
 
-        i++;//################
     }
     return res;
 }
