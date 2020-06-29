@@ -160,9 +160,9 @@
 #getLast8("/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning")
 
 
-Rcpp::sourceCpp('/home/yang/prepareCamiDataR.cpp')
-
-prepareCamiData("/home/yang/uni/CAMI-Daten/high/prepInFile.txt")
+# Rcpp::sourceCpp('/home/yang/prepareCamiDataR.cpp')
+#
+# prepareCamiData("/home/yang/uni/CAMI-Daten/high/prepInFile.txt")
 
 #prepare(c("/home/yang/uni/CAMI-Daten/low/RL_S001__insert_270.fq","/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning","/home/yang/uni/CAMI-Daten/low/preparedFqs/"))
 
@@ -219,8 +219,31 @@ prepareCamiData("/home/yang/uni/CAMI-Daten/high/prepInFile.txt")
 
 #testReadHash("/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning.l8","/home/yang/uni/CAMI-Daten/low/gs_read_mapping.binning")
 #
+#
+# assignInNamespace("cedta.override",
+#                   c(data.table:::cedta.override,"RealReadSim"),
+#                   "data.table")
 
-assignInNamespace("cedta.override",
-                  c(data.table:::cedta.override,"RealReadSim"),
-                  "data.table")
+Rcpp::sourceCpp('newCoAssembly.cpp')
+starts = list(c(10),c(9,19),c(3,15),c(8))
+ends = list(c(19),c(15,26),c(8,23),c(16))
+seqNames = c("a","b","c","d")
+covs = list(list(c(1,1,1,1,1,1,1,1,1,1)),
+            list(c(10,10,10,10,10,10,10),c(10,10,10,10,10,10,10,10)),
+            list(c(5,5,5,5,5,5),c(5,5,5,5,5,5,5,5,5)),
+            list(c(2,2,2,2,2,2,2,2,2)))
+covVecs = list(list(c(1)),list(c(10),c(10)),list(c(5),c(5)),list(c(2)))
+seqs = list(c("aaaaaaaaaa"),c("ccccccc","cccccccc"),c("tttttt","ttttttttt"),c("ggggggggg"))
+minoverlaps = c(1,1,1,1)
+
+ovstarts1 = list(c(10,10,16,17),c(11,20,23),c(15))
+ovstarts2 = list(c(13,5,19,8),c(3,8,15),c(11))
+ovends1 = list(c(12,13,19,19),c(15,26,26),c(20))
+ovends2 = list(c(15,8,22,11),c(7,14,18),c(16))
+seqid1 = list(c(0,0,0,0),c(1,1,1),c(2))
+seqid2 = list(c(1,2,1,3),c(2,3,2),c(3))
+minshare = 0
+
+makeChimericContigs(seqNames = seqNames,minOverlaps = minoverlaps,covs = covs,covVecs = covVecs,starts = starts,ends = ends,seqs = seqs,
+                    ovStarts1 = ovstarts1,ovEnds1 = ovends1,ovStarts2 = ovstarts2,ovEnds2 = ovends2,seqID1 = seqid1,seqID2 = seqid2,minShare = 0)
 

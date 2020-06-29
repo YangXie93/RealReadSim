@@ -5,41 +5,97 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <iostream>
 
 //[[Rcpp::plugins(cpp14)]]
 
 using namespace Rcpp;
 
+class SuperContig{
+public:
+
+    std::string getSeq(){
+        return seq;
+    }
+    std::vector<int> getCovVec(){
+        return covVec;
+    }
+
+    std::vector<int>::iterator getCovVecIt(){
+        return covVec.begin();
+    }
+
+    int length(){
+        return seq.size();
+    }
+
+    std::vector<int>::iterator getCovAt(int pos){
+        return next(cov.begin(),pos);
+    }
+
+    std::vector<int>::iterator getCovEnd(){
+        return cov.end();
+    }
+
+    std::vector<int>::iterator getCovBegin(){
+        return cov.begin();
+    }
+
+    std::string::iterator getSeqBegin(){
+        return seq.begin();
+    }
+
+    std::string::iterator getSeqEnd(){
+        return seq.end();
+    }
+
+protected:
+    std::vector<int> cov;
+    std::vector<int> covVec;
+    std::vector<std::string> seqName;
+    std::string seq;
+};
+
+
+//######################################################################
+
 class SubContig{
 public:
-    SubContig(std::string* superSeq,std::vector<int>* superCov,int seqID,int start,int end,std::string seqName, std::vector<int>::iterator covStart,std::vector<int>::iterator covEnd,std::string::iterator seqStart,std::string::iterator seqEnd){
-        this->superSeq = superSeq;
-        this->superCov = superCov;
+    SubContig(){
+        ;
+    }
+
+    SubContig(SuperContig* super,int seqID,int start,int end,std::string seqName){
+        this->super = super;
         this-> seqID = seqID;
         this-> start = start;
         this-> end = end;
         this->seqName = seqName;
-        this-> covStart = covStart;
-        this-> covEnd = covEnd;
-        this-> seqStart = seqStart;
-        this-> seqEnd = seqEnd;
+        this-> covStart = (this->super)->getCovBegin();
+        this-> seqStart = (this->super)->getSeqBegin();
+        this-> covEnd = (this->super)->getCovEnd();
+        this-> seqEnd = (this->super)->getSeqEnd();
+        length = end-start+1;
     }
 
 
-    void update(int startDiff,std::string* newSuperSeq,std::vector<int>* newSuperCov){
+    void update(int startDiff,SuperContig* newSuper){
 
-        int s = distance(superSeq->begin(),seqStart) + startDiff +1;
-        int c = distance(superCov->begin(),covStart) + startDiff +1;
-        int se = distance(superSeq->begin(),seqEnd) + startDiff +1;
-        int ce = distance(superCov->begin(),covEnd) + startDiff +1;
+        Rcout << "push: " << startDiff << std::endl;
 
-        covStart = next(newSuperCov->begin(),c);
-        covEnd = next(newSuperCov->begin(),ce);
-        seqStart = next(newSuperSeq->begin(),s);
-        seqEnd = next(newSuperSeq->begin(),se);
+        int newStart = distance(super->getSeqBegin(),seqStart) + startDiff;
+        int newEnd = distance(super->getSeqBegin(),seqEnd) + startDiff;
 
-        this->superCov = newSuperCov;
-        this->superSeq = newSuperSeq;
+
+        Rcout << "after push: " << newStart << " " << newEnd << std::endl;
+
+        covStart = next(newSuper->getCovBegin(),newStart);
+        covEnd = next(newSuper->getCovBegin(),newEnd);
+        seqStart = next(newSuper->getSeqBegin(),newStart);
+        seqEnd = next(newSuper->getSeqBegin(),newEnd);
+
+        super = newSuper;
+        it += startDiff;
 
 
     }
@@ -52,21 +108,36 @@ public:
         return next(covStart,i);
     }
 
-    bool isEnd(){
-        return seqStart == superSeq->begin() || seqEnd == prev(superSeq->end());
+    std::vector<int>::iterator getCovEnd(){
+        return super->getCovEnd();
+    }
+
+    std::vector<int>::iterator getCovBegin(){
+        return super->getCovBegin();
     }
 
     int seqID;
     int start;
     int end;
+    int length;
     std::string seqName;
     std::vector<int>::iterator covStart;
     std::vector<int>::iterator covEnd;
     std::string::iterator seqStart;
     std::string::iterator seqEnd;
-    std::string* superSeq;
-    std::vector<int>* superCov;
+    int it = 0;
+    SuperContig* super;
 };
+
+//######################################################################
+
+
+std::ostream& operator<<(std::ostream &strm, const SubContig &cont){
+    return strm << "Contig mit start: " << cont.start << ", end: " << cont.end << ", seqID: " << cont.seqID << ", seq name: " << cont.seqName;
+}
+
+
+//######################################################################
 
 class ContigContainer{
 public:
@@ -87,26 +158,33 @@ private:
     std::vector<std::vector<int> > covVecs;
 };
 
-class Contig{
+
+//######################################################################
+
+class Contig: public SuperContig{
 public:
     Contig(){
         ;
     }
 
-    Contig(int start,int end, int seqID,int mor,std::string seq,std::string seqName,std::vector<int> cov,std::vector<int> covVec,ContigContainer* cc,double mcs){
+    Contig(int start,int end, int seqID,int mor,std::string &seq,std::string &seqName,std::vector<int> &cov,std::vector<int> &covVec,ContigContainer* cc,double mcs){
         this->cov = cov;
         this->covVec = covVec;
         this->seq = seq;
         this->minOverlap = mor;
-        this->seqName = seqName;
-        SubContig tmp = SubContig(&seq,&cov,seqID,start,end,seqName,cov.begin(),cov.end(),seq.begin(),seq.end());
-        this->subs.push_back(&tmp);
-        container = cc;
+        this->seqName.push_back(seqName);
+        SubContig* tmp = new SubContig(this,seqID,start,end,seqName);
+        this->subs.push_back(tmp);
+        this->container = cc;
         minCovShare = mcs;
     }
     ~Contig(){
+        for(int i = 0;i < subs.size();i++){
+            delete subs[i];
+        }
+
         if(save)
-            container->add(seq,covVec,isChimeric);
+            (this->container)->add(seq,covVec,isChimeric);
     }
 
     // static
@@ -139,20 +217,28 @@ public:
         int start2 = otherSub->start;
         int end2 = otherSub->end;
 
-
         if(hasOverlap(start1,end1,start2,end2,ovStart1,ovEnd1,ovStart2,ovEnd2)){
 
-            std::vector<int> site = translateOverlap(start1,end1,start2,end2,ovStart2,ovEnd1,ovStart2,ovEnd2);
-            bool thisLeft = distance(cov.begin(),thisSub->at(site[0])) > 0;
-            bool thisRight = distance(thisSub->at(site[1]),cov.end()) > 0;
-            bool otherLeft = distance(other->getCovAt(0),otherSub->at(site[2])) > 0;
-            bool otherRight = distance(otherSub->at(site[3]),other->getCovEnd()) > 0;
+            Rcout << "starts/ends: " << start1 << " " << end1 << " " << start2 << " " << end2 << std::endl;
 
+            std::vector<int> site = translateOverlap(start1,end1,start2,end2,ovStart1,ovEnd1,ovStart2,ovEnd2);
+
+            Rcout << "overlap: " << site[0] << " " << site[1] << " | " << site[2] <<" " << site[3] << std::endl;
+
+            bool thisLeft = distance( thisSub->getCovBegin(), next(thisSub->covStart,site[0]) ) > 0;
+            bool thisRight = distance( next(thisSub->covStart,site[1]), thisSub->getCovEnd() ) > 0;
+            bool otherLeft = distance(otherSub->getCovBegin(),next(otherSub->covStart,site[2])) > 0;
+            bool otherRight = distance(next(otherSub->covStart,site[3]) , otherSub->getCovEnd() ) > 0;
+
+            Rcout << "disputed seqs?: "<< distance((thisSub->getCovBegin()),next(thisSub->covStart,site[0]))  << " " <<
+                distance( next(thisSub->covStart,site[1]), cov.end()) << " " <<
+                    distance(otherSub->getCovBegin(),next(otherSub->covStart,site[2]))  << " "
+            << distance(next(otherSub->covStart,site[3]) , otherSub->getCovEnd() ) << std::endl;
+
+            Rcout << "disputed seqs?: " << thisLeft << " " << thisRight << " " << otherLeft << " " << otherRight << std::endl;
 
             if((thisLeft && otherLeft) || (thisRight && otherRight)){
-
-
-
+                Rcout << "disputed!\n";
                 return other;
             }
             else{
@@ -173,8 +259,12 @@ public:
 
                 share1 /= comb;
                 share2 /= comb;
+
+                Rcout << "shares: " << share1 << " " << share2 << " " << minCovShare << std::endl;
+
                 if((share1 > minCovShare || share2 > minCovShare)){
-                    return combine(*other,site);
+                    Rcout << "combine\n";
+                    return combine(*other,thisSub,otherSub,site);
                 }
                 else{
                     return other;
@@ -186,61 +276,6 @@ public:
         }
     }
 
-    std::string getSeq(){
-        return seq;
-    }
-    std::vector<int> getCovVec(){
-        return covVec;
-    }
-
-    std::vector<int>::iterator getCovVecIt(){
-        return covVec.begin();
-    }
-
-    int length(){
-        return seq.size();
-    }
-
-    std::vector<int>::iterator getCovAt(int pos){
-        return next(cov.begin(),pos);
-    }
-
-    int getSubCount(){
-        return subCount;
-    }
-
-    std::vector<int>::iterator getCovEnd(){
-        return cov.end();
-    }
-
-    std::vector<SubContig*>::iterator getSubIt(){
-        return subs.begin();
-    }
-
-    SubContig* getSubAt(int i){
-        return subs[i];
-    }
-
-    void setSave(bool is){
-        save = is;
-    }
-
-private:
-
-    std::vector<int> cov;
-    std::vector<int> covVec;
-    std::vector<int> subKey;
-    std::string seqName;
-    std::string seq;
-    int minOverlap;
-    bool save = true;
-    bool isChimeric = false;
-    int subCount = 1;
-
-    std::vector<SubContig*> subs;
-
-    ContigContainer* container;
-    double minCovShare;
 
     // function returning zero if num is negative or num itself if not
     //
@@ -271,7 +306,7 @@ private:
     }
 
 
-    Contig* combine(Contig other,std::vector<int> identical){
+    Contig* combine(Contig other,SubContig* thisSub,SubContig* otherSub,std::vector<int> identical){
 
 
         std::vector<int>::iterator o = other.getCovVecIt();
@@ -290,8 +325,8 @@ private:
 
         std::vector<int>::iterator bgn;
         std::vector<int>::iterator nd;
-        std::vector<int>::iterator thisOv = this->getCovAt(identical[0]);
-        std::vector<int>::iterator otherOv = other.getCovAt(identical[2]);
+        std::vector<int>::iterator thisOv = thisSub->at(identical[0]);
+        std::vector<int>::iterator otherOv = otherSub->at(identical[2]);
 
 
         int startDiff;
@@ -312,20 +347,20 @@ private:
             otherSubsDiff = startDiff;
         }
 
-        int end1 = (cov.size() - identical[1])-1;
-        int end2 = (other.length() -identical[3])-1;
+        int end1 = distance(next(thisSub->covStart,identical[1]),thisSub->covEnd);
+        int end2 = distance(next(otherSub->covStart,(identical[3])),otherSub->covEnd);
         int endDiff;
 
         newSeq += seq.substr(identical[0],identicalLength);
 
         if(end1 >= end2){
-            nd = this->getCovAt(identical[1]);
-            newSeq += seq.substr(identical[1],end1);
+            nd = next(thisSub->covStart,identical[1]);
+            newSeq += seq.substr(thisSub->it+identical[1],end1);
             endDiff = end1;
         }
         else{
-            nd = other.getCovAt(identical[3]);
-            newSeq += (other.getSeq()).substr(identical[3],end2);
+            nd = next(otherSub->covStart,(identical[3]));
+            newSeq += (other.getSeq()).substr(otherSub->it + identical[3],end2);
             endDiff = end2;
         }
 
@@ -333,14 +368,15 @@ private:
         int second = 0;
         int last = 0;
 
-        while(first < startDiff && second < identicalLength && last < endDiff){
+        while(first < startDiff || second < identicalLength || last < endDiff){
+            Rcout << first <<" < "<<startDiff<<" || "<<second<<" < "<<identicalLength<<" || "<<last<<" < "<<endDiff<<std::endl;
             if(first < startDiff){
                 newCov.push_back(*bgn);
                 bgn++;
                 first++;
             }
             else{
-                if(second < (identical[1]-identical[0])){
+                if(second < identicalLength){
                     newCov.push_back((*thisOv + *otherOv));
                     thisOv++;
                     otherOv++;
@@ -349,7 +385,7 @@ private:
                 else{
                     newCov.push_back(*nd);
                     nd++;
-                    second++;
+                    last++;
                 }
             }
         }
@@ -357,12 +393,18 @@ private:
         this->cov = newCov;
         this->seq = newSeq;
 
+        Rcout << newSeq << std::endl;
+        for(int i = 0;i < newCov.size();i++){
+            Rcout << newCov[i] << " ";
+        }
+        Rcout << std::endl;
+
         for(int i = 0;i < subs.size();i++){
-            subs[i]->update(thisSubsDiff,&seq,&cov);
+            subs[i]->update(thisSubsDiff,this);
         }
         std::vector<SubContig*>::iterator it = other.getSubIt();
         for(int i = 0;i < other.getSubCount();i++){
-            ((*it)->update(otherSubsDiff,&seq,&cov));
+            ((*it)->update(otherSubsDiff,this));
             subs.push_back(*it);
             it++;
             subCount++;
@@ -373,8 +415,42 @@ private:
     }
 
 
+    int getSubCount(){
+        return subCount;
+    }
+
+
+    std::vector<SubContig*>::iterator getSubIt(){
+        return subs.begin();
+    }
+
+    SubContig* getSubAt(int i){
+        return subs[i];
+    }
+
+    void setSave(bool is){
+        save = is;
+    }
+
+
+
+private:
+
+    int minOverlap;
+    bool save = true;
+    bool isChimeric = false;
+    int subCount = 1;
+
+    std::vector<SubContig*> subs;
+
+    ContigContainer* container;
+    double minCovShare;
+
+
 };
 
+
+//######################################################################
 
 //[[Rcpp::export]]
 List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> minOverlaps, std::vector<std::vector<std::vector<int> > > covs,
@@ -404,7 +480,7 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
 
     std::vector<std::vector<Contig*> > contigsPerSeq;
     std::vector<Contig*> contigs;
-    Contig tmpCont;
+    Contig* tmpCont;
 
     std::vector<std::vector<SubContig*> > subsPerSeq;
     std::vector<SubContig*> subs;
@@ -418,14 +494,18 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
         seq = (*perSeqSeqs).begin();
 
 
-
         for(int j = 0;j < ((*perSeqEnds).size());j++){
 
-            tmpCont = Contig(*start,*end,i,*minOv,*seq,*SN,*cov,*covVec,&res,minShare);
-            contigs.push_back(&tmpCont);
-            tmpSub = tmpCont.getSubAt(0);
+            tmpCont = new Contig(*start,*end,i,*minOv,*seq,*SN,*cov,*covVec,&res,minShare);
+            contigs.push_back(tmpCont);
+            tmpSub = tmpCont->getSubAt(0);
             subs.push_back(tmpSub);
 
+            start++;
+            end++;
+            seq++;
+            cov++;
+            covVec++;
         }
 
         contigsPerSeq.push_back(contigs);
@@ -442,7 +522,7 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
         minOv++;
     }
 
-
+// ################################################################
 
     std::vector<std::vector<int> >::iterator ovStart1It = ovStarts1.begin();
     std::vector<std::vector<int> >::iterator ovEnds1It = ovEnds1.begin();
@@ -462,6 +542,7 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
     std::vector<Contig*>::iterator conts;
     std::vector<std::vector<Contig*> >::iterator contListJumper = contigsPerSeq.begin();
     std::vector<Contig*>::iterator contsJumper;
+
     std::vector<std::vector<SubContig*> >::iterator subsList = subsPerSeq.begin();
     std::vector<SubContig*>::iterator sub;
     std::vector<std::vector<SubContig*> >::iterator subsListJumper = subsPerSeq.begin();
@@ -474,10 +555,16 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
     int otherEnd;
     int otherSeq;
 
-    int j = 0;
-    int n = 0;
+    int j;
+    int n;
+
+    int nrDeleted = 0; //'##########################################
 
     for(int i = 0; i < seqNames.size();i++){
+
+        j = 0;
+        n = 0;
+
         ovstart1 = (*ovStart1It).begin();
         ovend1 = (*ovEnds1It).begin();
         ovstart2 = (*ovStarts2It).begin();
@@ -488,63 +575,57 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
         conts = (*contList).begin();
         sub = (*subsList).begin();
 
-        while(j < (*ovStart1It).size() && n < (*contList).size()){
+        Rcout << i << " other level 1\n";
+        if(ovStart1It != ovStarts1.end()){
 
-            if((*seqid1) == i){
-                sameSeqStart = *ovstart1;
-                sameSeqEnd = *ovend1;
-                otherStart = *ovstart2;
-                otherEnd = *ovend2;
-                otherSeq = *seqid2;
-            }
-            else{
-                if((*seqid2) == i){
-                    sameSeqStart = *ovstart2;
-                    sameSeqEnd = *ovend2;
-                    otherStart = *ovstart1;
-                    otherEnd = *ovend1;
-                    otherSeq = *seqid1;
+            while(j < (*ovStart1It).size() && n < (*contList).size()){
+                Rcout << j <<" " << n << " other level 2\n";
+                Rcout << "seqIDs: " << *seqid1 <<" " << *seqid2 << "\n";
+                if((*seqid1) == i){
+                    sameSeqStart = *ovstart1;
+                    sameSeqEnd = *ovend1;
+                    otherStart = *ovstart2;
+                    otherEnd = *ovend2;
+                    otherSeq = *seqid2;
                 }
                 else{
-                    sameSeqStart = 0;
-                    sameSeqEnd = 0;
-                }
-            }
-
-            if((*sub)->hasOverlap(sameSeqStart,sameSeqEnd)){
-                contsJumper = (*next(contListJumper,otherSeq)).begin();
-                subJumper = (*next(subsListJumper,otherSeq)).begin();
-                bool last = false;
-                while((!(*subJumper)->hasOverlap(otherStart,otherEnd) && last) && subJumper !=  (*next(subsListJumper,otherSeq)).end()){
-
-                    last = (*subJumper)->hasOverlap(otherStart,otherEnd);
-                    if(last){
-                        (*contsJumper) = (*conts)->fuse(*contsJumper,*sub,*subJumper,sameSeqStart,sameSeqEnd,otherStart,otherEnd);
-                    }
-
-                    subJumper++;
-                    contsJumper++;
-                }
-
-                if((*sub)->end > sameSeqEnd){
-                    j++;
-                    ovstart1++;
-                    ovstart2++;
-                    ovend1++;
-                    ovend2++;
-                    seqid1++;
-                    seqid2++;
-                }
-                else{
-                    if((*sub)->end < sameSeqEnd){
-                        n++;
-                        conts++;
-                        sub++;
+                    if((*seqid2) == i){
+                        sameSeqStart = *ovstart2;
+                        sameSeqEnd = *ovend2;
+                        otherStart = *ovstart1;
+                        otherEnd = *ovend1;
+                        otherSeq = *seqid1;
                     }
                     else{
-                        n++;
-                        conts++;
-                        sub++;
+                        sameSeqStart = 0;
+                        sameSeqEnd = 0;
+                    }
+                }
+
+                if((*sub)->hasOverlap(sameSeqStart,sameSeqEnd)){
+                    contsJumper = (*next(contListJumper,otherSeq)).begin();
+                    subJumper = (*next(subsListJumper,otherSeq)).begin();
+                    Rcout << "jumper: " << otherSeq << std::endl;
+                    Rcout << **subJumper << std::endl;
+                    Rcout << **sub << std::endl;
+                    while( subJumper !=  (*next(subsListJumper,otherSeq)).end() && !(*subJumper)->hasOverlap(otherStart,otherEnd) ){
+                        subJumper++;
+                        contsJumper++;
+                    }
+                    Rcout << **subJumper << std::endl;
+                    while( subJumper !=  (*next(subsListJumper,otherSeq)).end() &&  (*subJumper)->hasOverlap(otherStart,otherEnd)){
+
+                        Rcout << (subJumper !=  (*next(subsListJumper,otherSeq)).end() ) << " && "  <<( (*subJumper)->hasOverlap(otherStart,otherEnd)) << std::endl;
+                        Rcout << **subJumper << std::endl;
+                        Rcout << **sub << std::endl;
+                        (*contsJumper) = (*conts)->fuse(*contsJumper,*sub,*subJumper,sameSeqStart,sameSeqEnd,otherStart,otherEnd);
+
+                        subJumper++;
+                        contsJumper++;
+                    }
+
+                    if((*sub)->end > sameSeqEnd){
+                        Rcout << "contig is larger\n";
 
                         j++;
                         ovstart1++;
@@ -554,27 +635,53 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
                         seqid1++;
                         seqid2++;
                     }
-                }
+                    else{
+                        if((*sub)->end < sameSeqEnd){
+                            Rcout << "identical stretch is larger\n";
 
-            }
-            else{
-                if((*sub)->start >= sameSeqEnd){
-                    j++;
-                    ovstart1++;
-                    ovstart2++;
-                    ovend1++;
-                    ovend2++;
-                    seqid1++;
-                    seqid2++;
+                            n++;
+                            conts++;
+                            sub++;
+                        }
+                        else{
+                            Rcout << "same end\n";
+                            n++;
+                            conts++;
+                            sub++;
+
+                            j++;
+                            ovstart1++;
+                            ovstart2++;
+                            ovend1++;
+                            ovend2++;
+                            seqid1++;
+                            seqid2++;
+                        }
+                    }
+
                 }
                 else{
-                    n++;
-                    conts++;
-                    sub++;
+                    if((*sub)->start >= sameSeqEnd){
+                        j++;
+                        ovstart1++;
+                        ovstart2++;
+                        ovend1++;
+                        ovend2++;
+                        seqid1++;
+                        seqid2++;
+                    }
+                    else{
+                        n++;
+                        conts++;
+                        sub++;
+                    }
                 }
+
+
             }
-
-
+        }
+        else{
+            break;
         }
 
 
@@ -588,6 +695,17 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
         contList++;
         subsList++;
     }
+
+    contList = contigsPerSeq.begin();
+    for(int i = 0;i < contigsPerSeq.size();i++){
+        conts = (*contList).begin();
+        for(int j = 0;j < (*contList).size();j++){
+            delete *conts;
+            conts++;
+        }
+        contList++;
+    }
+
 
     return res.finalize();
 }
