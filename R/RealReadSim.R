@@ -1,5 +1,9 @@
 #'RealReadSim
 #'
+#'This package contains a mini-tool for the simulation of metagenomic contigs. The input data used are experimental reads, either in fastq
+#'or in bam format, and their respective referencesequences in fasta format.
+#'Except from the dependencies shown in the description file this package also needs Bowtie2 and samtools to be installed.
+#'
 #'@docType package
 #'@author Yang Xie
 #'@import Rcpp data.table Rsamtools
@@ -543,7 +547,7 @@ addToDataSystem <- function(filenames_csv,bowtieOptions = "--no-unal",minIdL,met
     #------------- building the bowtie2 index for crossmapping --------------------
     if(sum(tmpTable$isCrossmaped) > 0){
         dr = dir(metagenomeDir)
-        if(hasNew){
+        if(hasNew || initTable){
             dr = dr[which(dr != "Crossmaps")]
             dr = dr[which(dr != "DSTable.Rds")]
             dr = dr[which(dr != "metagenome.fasta")]
@@ -750,6 +754,9 @@ crossMapRRSDS <- function(minL,threads,metagenomeDir){
 
                 map = map[,.(start1 = list(start1),end1 = list(end1),start2 = list(start2),end2 = list(end2)),by  = list(names1,names2)]
 
+                unneccessary = cutUneccessaryIdenticals(map$name1,map$name2)
+
+                map = map[!unneccessary]
                 map = map[names1 != names2]
                 map = map[!(names1 %in% mappedAllready)]
                 map = map[!(names2 %in% mappedAllready)]
@@ -757,6 +764,8 @@ crossMapRRSDS <- function(minL,threads,metagenomeDir){
                 if(length(map$names1) > 0){
 
                     sameConts = getIdenticalSeqsList(map$names1,map$start1,map$end1,map$names2,map$start2,map$end2,minL)
+
+
                     for(i in 1:length(sameConts)){
 
                         if(length(sameConts[[i]][[1]]) > 0){

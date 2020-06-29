@@ -11,6 +11,8 @@
 
 using namespace Rcpp;
 
+//################################ parent class for Contig so that Contig and SubContig can reference each other #################
+
 class SuperContig{
 public:
 
@@ -57,7 +59,7 @@ protected:
 };
 
 
-//######################################################################
+//################################ class to save information about the contigs th chimeric contigs are made of #################
 
 class SubContig{
 public:
@@ -82,10 +84,9 @@ public:
     void update(int startDiff,SuperContig* newSuper){
 
         Rcout << "push: " << startDiff << std::endl;
-
-        int newStart = distance(super->getSeqBegin(),seqStart) + startDiff;
-        int newEnd = distance(super->getSeqBegin(),seqEnd) + startDiff;
-
+        it += startDiff;
+        int newStart = it;
+        int newEnd = distance(seqStart,seqEnd) + startDiff -1;
 
         Rcout << "after push: " << newStart << " " << newEnd << std::endl;
 
@@ -95,7 +96,7 @@ public:
         seqEnd = next(newSuper->getSeqBegin(),newEnd);
 
         super = newSuper;
-        it += startDiff;
+
 
 
     }
@@ -136,8 +137,7 @@ std::ostream& operator<<(std::ostream &strm, const SubContig &cont){
     return strm << "Contig mit start: " << cont.start << ", end: " << cont.end << ", seqID: " << cont.seqID << ", seq name: " << cont.seqName;
 }
 
-
-//######################################################################
+//################################ class to save contig information after deletion and to make them into Rcpp::List #################
 
 class ContigContainer{
 public:
@@ -159,7 +159,7 @@ private:
 };
 
 
-//######################################################################
+//################################ class managing the combination of different contigs to chimeric contigs #################
 
 class Contig: public SuperContig{
 public:
@@ -220,20 +220,21 @@ public:
         if(hasOverlap(start1,end1,start2,end2,ovStart1,ovEnd1,ovStart2,ovEnd2)){
 
             Rcout << "starts/ends: " << start1 << " " << end1 << " " << start2 << " " << end2 << std::endl;
-
+            Rcout << *thisSub << std::endl;
+            Rcout << *otherSub << std::endl;
             std::vector<int> site = translateOverlap(start1,end1,start2,end2,ovStart1,ovEnd1,ovStart2,ovEnd2);
 
             Rcout << "overlap: " << site[0] << " " << site[1] << " | " << site[2] <<" " << site[3] << std::endl;
 
-            bool thisLeft = distance( thisSub->getCovBegin(), next(thisSub->covStart,site[0]) ) > 0;
-            bool thisRight = distance( next(thisSub->covStart,site[1]), thisSub->getCovEnd() ) > 0;
-            bool otherLeft = distance(otherSub->getCovBegin(),next(otherSub->covStart,site[2])) > 0;
-            bool otherRight = distance(next(otherSub->covStart,site[3]) , otherSub->getCovEnd() ) > 0;
+            bool thisLeft = distance( thisSub->getCovBegin(), thisSub->at(site[0]) ) > 0;
+            bool thisRight = distance( thisSub->at(site[1]), thisSub->getCovEnd() ) > 1;
+            bool otherLeft = distance(otherSub->getCovBegin(),otherSub->at(site[2])) > 0;
+            bool otherRight = distance(otherSub->at(site[3]) , otherSub->getCovEnd() ) > 1;
 
-            Rcout << "disputed seqs?: "<< distance((thisSub->getCovBegin()),next(thisSub->covStart,site[0]))  << " " <<
-                distance( next(thisSub->covStart,site[1]), cov.end()) << " " <<
-                    distance(otherSub->getCovBegin(),next(otherSub->covStart,site[2]))  << " "
-            << distance(next(otherSub->covStart,site[3]) , otherSub->getCovEnd() ) << std::endl;
+            Rcout << "disputed seqs?: "<< distance( thisSub->getCovBegin(), thisSub->at(site[0]) )  << " " <<
+                distance( thisSub->at(site[1]), thisSub->getCovEnd() ) << " " <<
+                    distance(otherSub->getCovBegin(),otherSub->at(site[2])) << " "
+            << distance(otherSub->at(site[3]) , otherSub->getCovEnd() ) << std::endl;
 
             Rcout << "disputed seqs?: " << thisLeft << " " << thisRight << " " << otherLeft << " " << otherRight << std::endl;
 
@@ -329,39 +330,46 @@ public:
         std::vector<int>::iterator otherOv = otherSub->at(identical[2]);
 
 
+        int thisStartDist = distance(thisSub->getCovBegin(),thisSub->at(identical[0]));
+        int otherStartDist = distance(otherSub->getCovBegin(),otherSub->at(identical[2]));
+        int thisEndDist =distance(thisSub->at(identical[1]),thisSub->getCovEnd()) -1;
+        int otherEndDist =distance(otherSub->at(identical[3]),otherSub->getCovEnd()) -1;
+
         int startDiff;
+        int endDiff;
+
         int otherSubsDiff = 0;
         int thisSubsDiff = 0;
 
 
-        if(identical[0] >= identical[2]){
+        if(thisStartDist >= otherStartDist){
             bgn = cov.begin();
-            startDiff = identical[0];
+            startDiff = thisStartDist;
             newSeq += seq.substr(0,startDiff);
-            thisSubsDiff = startDiff;
+            otherSubsDiff = thisStartDist;
         }
         else{
-            bgn = other.getCovAt(0);
-            startDiff = identical[2];
+            bgn = other.getCovBegin();
+            startDiff = otherStartDist;
             newSeq += (other.getSeq()).substr(0,startDiff);
-            otherSubsDiff = startDiff;
+            thisSubsDiff = otherStartDist;
         }
 
-        int end1 = distance(next(thisSub->covStart,identical[1]),thisSub->covEnd);
-        int end2 = distance(next(otherSub->covStart,(identical[3])),otherSub->covEnd);
-        int endDiff;
 
         newSeq += seq.substr(identical[0],identicalLength);
 
-        if(end1 >= end2){
-            nd = next(thisSub->covStart,identical[1]);
-            newSeq += seq.substr(thisSub->it+identical[1],end1);
-            endDiff = end1;
+
+        if(thisEndDist >= otherEndDist){
+            nd = thisSub->at(identical[1]);
+            endDiff = thisEndDist;
+            newSeq += seq.substr(thisSub->it+identical[1],endDiff);
+
         }
         else{
-            nd = next(otherSub->covStart,(identical[3]));
-            newSeq += (other.getSeq()).substr(otherSub->it + identical[3],end2);
-            endDiff = end2;
+            nd = otherSub->at(identical[3]);
+            endDiff = otherEndDist;
+            newSeq += (other.getSeq()).substr(otherSub->it + identical[3],endDiff);
+
         }
 
         int first = 0;
@@ -393,7 +401,7 @@ public:
         this->cov = newCov;
         this->seq = newSeq;
 
-        Rcout << newSeq << std::endl;
+        Rcout << newSeq << " " << thisSubsDiff << " " << otherSubsDiff << std::endl;
         for(int i = 0;i < newCov.size();i++){
             Rcout << newCov[i] << " ";
         }
@@ -450,7 +458,7 @@ private:
 };
 
 
-//######################################################################
+//################################ function checking each contig for all identical stretches with all other contigs and invoking the combination if neccesary #################
 
 //[[Rcpp::export]]
 List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> minOverlaps, std::vector<std::vector<std::vector<int> > > covs,
@@ -499,6 +507,7 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
             tmpCont = new Contig(*start,*end,i,*minOv,*seq,*SN,*cov,*covVec,&res,minShare);
             contigs.push_back(tmpCont);
             tmpSub = tmpCont->getSubAt(0);
+            Rcout << *tmpSub << " " << i << " " << j << std::endl;
             subs.push_back(tmpSub);
 
             start++;
@@ -597,6 +606,7 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
                         otherSeq = *seqid1;
                     }
                     else{
+                        Rcout << "mystery\n";
                         sameSeqStart = 0;
                         sameSeqEnd = 0;
                     }
@@ -605,77 +615,38 @@ List makeChimericContigs(std::vector<std::string> seqNames, std::vector<int> min
                 if((*sub)->hasOverlap(sameSeqStart,sameSeqEnd)){
                     contsJumper = (*next(contListJumper,otherSeq)).begin();
                     subJumper = (*next(subsListJumper,otherSeq)).begin();
-                    Rcout << "jumper: " << otherSeq << std::endl;
-                    Rcout << **subJumper << std::endl;
-                    Rcout << **sub << std::endl;
-                    while( subJumper !=  (*next(subsListJumper,otherSeq)).end() && !(*subJumper)->hasOverlap(otherStart,otherEnd) ){
+
+                    while( subJumper !=  (*next(subsListJumper,otherSeq)).end() && !((*subJumper)->hasOverlap(otherStart,otherEnd)) ){
                         subJumper++;
                         contsJumper++;
                     }
-                    Rcout << **subJumper << std::endl;
-                    while( subJumper !=  (*next(subsListJumper,otherSeq)).end() &&  (*subJumper)->hasOverlap(otherStart,otherEnd)){
 
-                        Rcout << (subJumper !=  (*next(subsListJumper,otherSeq)).end() ) << " && "  <<( (*subJumper)->hasOverlap(otherStart,otherEnd)) << std::endl;
-                        Rcout << **subJumper << std::endl;
-                        Rcout << **sub << std::endl;
+                    while(subJumper !=  (*next(subsListJumper,otherSeq)).end() && (*subJumper)->hasOverlap(otherStart,otherEnd)){
+
                         (*contsJumper) = (*conts)->fuse(*contsJumper,*sub,*subJumper,sameSeqStart,sameSeqEnd,otherStart,otherEnd);
-
                         subJumper++;
                         contsJumper++;
                     }
 
-                    if((*sub)->end > sameSeqEnd){
-                        Rcout << "contig is larger\n";
+                }
+                if((*sub)->end < sameSeqStart){
+                    Rcout << "identical stretch is larger\n";
 
-                        j++;
-                        ovstart1++;
-                        ovstart2++;
-                        ovend1++;
-                        ovend2++;
-                        seqid1++;
-                        seqid2++;
-                    }
-                    else{
-                        if((*sub)->end < sameSeqEnd){
-                            Rcout << "identical stretch is larger\n";
-
-                            n++;
-                            conts++;
-                            sub++;
-                        }
-                        else{
-                            Rcout << "same end\n";
-                            n++;
-                            conts++;
-                            sub++;
-
-                            j++;
-                            ovstart1++;
-                            ovstart2++;
-                            ovend1++;
-                            ovend2++;
-                            seqid1++;
-                            seqid2++;
-                        }
-                    }
-
+                    n++;
+                    conts++;
+                    sub++;
                 }
                 else{
-                    if((*sub)->start >= sameSeqEnd){
-                        j++;
-                        ovstart1++;
-                        ovstart2++;
-                        ovend1++;
-                        ovend2++;
-                        seqid1++;
-                        seqid2++;
-                    }
-                    else{
-                        n++;
-                        conts++;
-                        sub++;
-                    }
+
+                    j++;
+                    ovstart1++;
+                    ovstart2++;
+                    ovend1++;
+                    ovend2++;
+                    seqid1++;
+                    seqid2++;
                 }
+
 
 
             }

@@ -43,6 +43,27 @@
 // }
 
 //[[Rcpp::export]]
+std::vector<bool> cutUneccessaryIdenticals(std::vector<std::string> name1,std::vector<std::string> name2){
+    std::vector<bool> res;
+    res.reserve(name1.size());
+
+    for(int i = 0;i < name1.size();i++){
+        res.push_back(false);
+    }
+
+    for(int i = 0; i < name1.size();i++){
+        for(int j = i+1;j < name2.size();j++){
+            if(name1[i] == name2[j] && name1[j] == name2[i]){
+                res[i] = true;
+            }
+        }
+    }
+
+    return res;
+}
+
+
+//[[Rcpp::export]]
 std::vector<std::string> makeFastaOutput(std::vector<std::string> &names,std::vector<std::string> &seqs,std::string outFile){
 
     std::vector<std::string> res;
