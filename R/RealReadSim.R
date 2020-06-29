@@ -583,8 +583,8 @@ saveReads <- function(fasta,fastq1,fastq2,bams,this,metagenomeDir,bowtieOptions,
     seqLngs = c()
     filenames = list()
     meanWidths = c()
-    system(paste0("bowtie2-build --threads ",threads," -o 3 ",paste(bowtieBuildOptions,collapse = " ")," ",fasta," ",this,"/index"),ignore.stdout = TRUE)
-    print(paste0("bowtie2-build --threads ",threads," -o 3 ",paste(bowtieBuildOptions,collapse = " ")," ",fasta," ",this,"/index"))
+    system(paste0("bowtie2-build --threads ",threads," ",paste(bowtieBuildOptions,collapse = " ")," ",fasta," ",this,"/index"),ignore.stdout = TRUE)
+    print(paste0("bowtie2-build --threads ",threads," ",paste(bowtieBuildOptions,collapse = " ")," ",fasta," ",this,"/index"))
     for(i in 1:num){
 
         if(length(bams) == 0){
