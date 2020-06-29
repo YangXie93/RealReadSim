@@ -1,60 +1,74 @@
+#'buildInputCsv
+#'
+#'@description
+#'
+#'
+#'@param fastaPath
+#'@param readPath
+#'@param mode
+#'@param out
+#'
+#'
+
 buildInputCsv <- function(fastaPath,readPath,mode = "fastq",out = "~"){
 
-    if(length(fastaPath) != length(readPath)){
-        print("fastaPath and readPath have to have the same length")
-        return(0)
-    }
-
-    res = c()
-
-    for(j in 1:length(fastaPath)){
-        if(substr(fastaPath[j],nchar(fastaPath[j]),nchar(fastaPath[j])) != "/"){
-            fastaPath[j] = paste0(fastaPath[j],"/")
+    if(mode == "bam" || "fastq"){
+        if(length(fastaPath) != length(readPath)){
+            print("fastaPath and readPath have to have the same length")
+            return(0)
         }
 
-        if(substr(readPath[j],nchar(readPath[j]),nchar(readPath[j])) != "/"){
-            readPath[j] = paste0(readPath[j],"/")
-        }
+        res = c()
 
-        fastas = dir(fastaPath[j])
-        reads = dir(readPath[j])
-        if(mode == "fastq"){
-            namesReads = gsub(".fastq$|.fq$|_[1|2]_.fastq$|_[1|2]_.fq$","",reads)
-        }
-        if(mode == "bam"){
-            namesReads = sub(".bam","",reads)
-        }
-        namesFasta = sub(".fna|.fasta|.final.*|.gt1kb.*|.scaffolds|_run.*|.*.fai","",fastas)
+        for(j in 1:length(fastaPath)){
+            if(substr(fastaPath[j],nchar(fastaPath[j]),nchar(fastaPath[j])) != "/"){
+                fastaPath[j] = paste0(fastaPath[j],"/")
+            }
 
-        print(namesFasta[!(namesFasta %in% namesReads)])#######################
+            if(substr(readPath[j],nchar(readPath[j]),nchar(readPath[j])) != "/"){
+                readPath[j] = paste0(readPath[j],"/")
+            }
 
-        fastas = fastas[namesFasta %in% namesReads]
-        namesFasta = namesFasta[namesFasta %in% namesReads]
+            fastas = dir(fastaPath[j])
+            reads = dir(readPath[j])
+            if(mode == "fastq"){
+                namesReads = gsub(".fastq$|.fq$|_[1|2]_.fastq$|_[1|2]_.fq$","",reads)
+            }
+            if(mode == "bam"){
+                namesReads = sub(".bam","",reads)
+            }
+            namesFasta = sub(".fna|.fasta|.final.*|.gt1kb.*|.scaffolds|_run.*|.*.fai","",fastas)
+
+            print(namesFasta[!(namesFasta %in% namesReads)])#######################
+
+            fastas = fastas[namesFasta %in% namesReads]
+            namesFasta = namesFasta[namesFasta %in% namesReads]
 
 
-        rLink1 = c()
-        rLink2 = c()
-        for(i in 1:length(namesFasta)){
-            rLink1[i] = reads[which(namesReads == namesFasta[i])[1]]
-            rLink2[i] = reads[which(namesReads == namesFasta[i])[2]]
-        }
-        for(i in 1:length(rLink2)){
-            if(!is.na(rLink2[i])){
-                rLink2[i] = paste0(readPath[j],rLink2[i])
+            rLink1 = c()
+            rLink2 = c()
+            for(i in 1:length(namesFasta)){
+                rLink1[i] = reads[which(namesReads == namesFasta[i])[1]]
+                rLink2[i] = reads[which(namesReads == namesFasta[i])[2]]
+            }
+            for(i in 1:length(rLink2)){
+                if(!is.na(rLink2[i])){
+                    rLink2[i] = paste0(readPath[j],rLink2[i])
+                }
+                else{
+                    rLink2[i] = ""
+                }
+            }
+
+            if(paste0(rLink2,collapse = "") == ""){
+                table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath,rLink1))
             }
             else{
-                rLink2[i] = ""
+                table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath[j],rLink1),readsRev = rLink2)
             }
+            write.csv(table,paste0(out,j,".txt"),row.names = FALSE,quote = FALSE)
+            res[j] = paste0(out,j,".txt")
         }
-
-        if(paste0(rLink2,collapse = "") == ""){
-            table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath,rLink1))
-        }
-        else{
-            table = data.frame(fasta = paste0(fastaPath,fastas),readsFwd = paste0(readPath[j],rLink1),readsRev = rLink2)
-        }
-        write.csv(table,paste0(out,j,".txt"),row.names = FALSE,quote = FALSE)
-        res[j] = paste0(out,j,".txt")
-    }
+    s}
     return(res)
 }
